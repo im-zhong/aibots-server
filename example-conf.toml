@@ -1,0 +1,17 @@
+[postgres]
+host = 'localhost'
+port = 5432
+username = 'postgres'
+password = 'postgres'
+database = 'aibot'
+
+[fastapi]
+host = 'localhost'
+port = 8000
+
+[minio]
+endpoint = 'localhost:9000'
+access_key = 'root'
+secret_key = '12345678'
+secure = false
+bucket_name = 'test'
