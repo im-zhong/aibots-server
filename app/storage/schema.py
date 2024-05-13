@@ -35,7 +35,7 @@ Base = declarative_base()
 # https://fastapi.tiangolo.com/tutorial/sql-databases/#alembic-note
 
 
-class User(Base):
+class UserSchema(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -46,14 +46,14 @@ class User(Base):
     password: Mapped[str] = mapped_column()
     is_deleted: Mapped[bool] = mapped_column(default=False)
 
-    bots: Mapped[list["Bot"]] = relationship(back_populates="associated_user")
-    chats: Mapped[list["Chat"]] = relationship(back_populates="associated_user")
+    bots: Mapped[list["BotSchema"]] = relationship(back_populates="associated_user")
+    chats: Mapped[list["ChatSchema"]] = relationship(back_populates="associated_user")
 
     def is_admin(self) -> bool:
         return self.role == Role.ADMIN.value
 
 
-class Bot(Base):
+class BotSchema(Base):
     __tablename__ = "bots"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -68,10 +68,10 @@ class Bot(Base):
     knowledge_id: Mapped[str] = mapped_column(default="")
     memory_id: Mapped[str] = mapped_column(default="")
 
-    associated_user: Mapped[User] = relationship(back_populates="bots")
+    associated_user: Mapped[UserSchema] = relationship(back_populates="bots")
 
 
-class Chat(Base):
+class ChatSchema(Base):
     __tablename__ = "chats"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -80,18 +80,21 @@ class Chat(Base):
     create_at: Mapped[datetime] = mapped_column(default=datetime.now())
     is_deleted: Mapped[bool] = mapped_column(default=False)
 
-    associated_user: Mapped[User] = relationship(back_populates="chats")
-    messages: Mapped[list["Message"]] = relationship(back_populates="associated_chat")
+    associated_user: Mapped[UserSchema] = relationship(back_populates="chats")
+    messages: Mapped[list["MessageSchema"]] = relationship(
+        back_populates="associated_chat"
+    )
 
 
-class Message(Base):
+class MessageSchema(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id"))
     sender: Mapped[str] = mapped_column()
     content: Mapped[str] = mapped_column()
-    images: Mapped[str] = mapped_column()
+    # 根据目前模型的能力，我们假设单次chat只能保存一张图片
+    images: Mapped[str] = mapped_column(default="")
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
-    associated_chat: Mapped[Chat] = relationship(back_populates="messages")
+    associated_chat: Mapped[ChatSchema] = relationship(back_populates="messages")

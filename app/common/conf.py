@@ -42,7 +42,7 @@ class Conf:
         self._minio = MinioConf(**conf["minio"])
 
     def check_conf(self, conf: dict[str, Any]) -> None:
-        keys: list[str] = ["mongo", "fastapi", "zhipuai"]
+        keys: list[str] = ["fastapi", "postgres", "minio"]
         for key in keys:
             if key not in conf:
                 raise Exception(f"配置文件中缺少{key}字段")
