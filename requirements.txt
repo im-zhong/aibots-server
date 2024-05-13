@@ -1,0 +1,13 @@
+pytest
+fastapi
+fastapi-users[sqlalchemy]
+fastapi-users[redis]
+uvicorn
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+httpx
+minio
+sqlalchemy
+psycopg2-binary
+pytest-mock
