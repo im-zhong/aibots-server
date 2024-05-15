@@ -57,7 +57,10 @@ class Conf:
 
     @property
     def postgres_url(self) -> str:
-        return f"postgresql://{self._postgres.username}:{self._postgres.password}@{self._postgres.host}/{conf._postgres.database}"
+        # TODO:
+        # use async db
+        # engine = create_engine('postgresql+asyncpg://user:password@host:port/name')
+        return f"postgresql+asyncpg://{self._postgres.username}:{self._postgres.password}@{self._postgres.host}/{conf._postgres.database}"
 
     @property
     def minio_setting(self):
@@ -84,6 +87,10 @@ class Conf:
     @property
     def knowledge_file_base_dir(self) -> str:
         return "deploy/knowledge"
+
+    @property
+    def redis_url(self) -> str:
+        return "redis://localhost:6379"
 
 
 conf = Conf.from_file(file="conf.toml")
