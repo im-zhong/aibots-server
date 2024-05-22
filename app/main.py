@@ -38,5 +38,6 @@ def read_root():
     return {"Hello": "World"}
 
 
-if __name__ == "__main__":
-    uvicorn.run(app)
+# uvicorn app.main:app --reload
+# if __name__ == "__main__":
+#     uvicorn.run(app, reload=True)

@@ -29,6 +29,14 @@ class MinioConf(BaseModel):
     bucket_name: str = Field(description="存储桶名称")
 
 
+class SMTPConf(BaseModel):
+    server: str = Field(description="SMTP服务器")
+    port: int = Field(description="端口")
+    email: str = Field(description="发件人邮箱")
+    password: str = Field(description="邮箱密码")
+    user: str = Field(description="用户名")
+
+
 class Conf:
     @staticmethod
     def from_file(file: str) -> "Conf":
@@ -40,9 +48,10 @@ class Conf:
         self._fastapi = FastAPIConf(**conf["fastapi"])
         self._postgres = PostgresConf(**conf["postgres"])
         self._minio = MinioConf(**conf["minio"])
+        self._smtp = SMTPConf(**conf["smtp"])
 
     def check_conf(self, conf: dict[str, Any]) -> None:
-        keys: list[str] = ["fastapi", "postgres", "minio"]
+        keys: list[str] = ["fastapi", "postgres", "minio", "smtp"]
         for key in keys:
             if key not in conf:
                 raise Exception(f"配置文件中缺少{key}字段")
@@ -91,6 +100,26 @@ class Conf:
     @property
     def redis_url(self) -> str:
         return "redis://localhost:6379"
+
+    @property
+    def smtp_server(self) -> str:
+        return self._smtp.server
+
+    @property
+    def smtp_port(self) -> int:
+        return self._smtp.port
+
+    @property
+    def smtp_user(self) -> str:
+        return self._smtp.user
+
+    @property
+    def smtp_email(self) -> str:
+        return self._smtp.email
+
+    @property
+    def smtp_password(self) -> str:
+        return self._smtp.password
 
 
 conf = Conf.from_file(file="conf.toml")
