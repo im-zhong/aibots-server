@@ -17,3 +17,5 @@ aiofiles
 thefuzz
 qdrant-client
 langchain-community
+langchain-openai
+pytest-asyncio
