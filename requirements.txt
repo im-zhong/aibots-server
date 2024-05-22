@@ -12,3 +12,8 @@ sqlalchemy
 psycopg2-binary
 pytest-mock
 asyncpg
+langchain
+aiofiles
+thefuzz
+qdrant-client
+langchain-community

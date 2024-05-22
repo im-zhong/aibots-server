@@ -37,6 +37,17 @@ class SMTPConf(BaseModel):
     user: str = Field(description="用户名")
 
 
+class QdrantConf(BaseModel):
+    host: str
+    prefer_grpc: bool
+    collection_name: str
+
+
+class OpenAIConf(BaseModel):
+    api_key: str = Field(description="openai API Key")
+    base_url: str = Field(description="openai API Base URL")
+
+
 class Conf:
     @staticmethod
     def from_file(file: str) -> "Conf":
@@ -49,6 +60,8 @@ class Conf:
         self._postgres = PostgresConf(**conf["postgres"])
         self._minio = MinioConf(**conf["minio"])
         self._smtp = SMTPConf(**conf["smtp"])
+        self._qdrant = QdrantConf(**conf["qdrant"])
+        self._openai = OpenAIConf(**conf["openai"])
 
     def check_conf(self, conf: dict[str, Any]) -> None:
         keys: list[str] = ["fastapi", "postgres", "minio", "smtp"]
@@ -120,6 +133,26 @@ class Conf:
     @property
     def smtp_password(self) -> str:
         return self._smtp.password
+
+    @property
+    def qdrant_host(self) -> str:
+        return self._qdrant.host
+
+    @property
+    def qdrant_prefer_grpc(self) -> bool:
+        return self._qdrant.prefer_grpc
+
+    @property
+    def qdrant_collection_name(self) -> str:
+        return self._qdrant.collection_name
+
+    @property
+    def openai_api_key(self) -> str:
+        return self._openai.api_key
+
+    @property
+    def openai_api_base_url(self) -> str:
+        return self._openai.base_url
 
 
 conf = Conf.from_file(file="conf.toml")

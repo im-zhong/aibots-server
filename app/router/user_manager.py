@@ -50,6 +50,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[UserSchema, UUID]):
         # https://wx.mail.qq.com/list/readtemplate?name=app_intro.html#/agreement/authorizationCode
         send_email(
             subject="确认您的注册账号",
-            message=f"请点击以下链接以确认您的注册账号: http://localhost:3000/auth/verify-register/{token}",
+            message=f"请点击以下链接以确认您的注册账号: http://localhost:3000/auth/verify-email/{token}",
             to_email=user.email,
         )
