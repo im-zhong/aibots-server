@@ -61,6 +61,13 @@ class ChatBot(AIBot):
     async def ainvoke(self, input: ChatMessage) -> AsyncGenerator[ChatMessage, None]:
         # self.chat_history.append(MessageSchema(role="user", content=input.content))
 
+        yield ChatMessage(
+            sender=1,
+            receiver=2,
+            is_start_of_stream=True,
+            content="Hello, World!",
+        )
+
         # just create a chat model and call it
         async for message in self.chain.astream(
             input={"input": input.content},
@@ -70,7 +77,9 @@ class ChatBot(AIBot):
             # print(message)
             # response_content = message.content
             yield ChatMessage(
-                sender=1, receiver=2, content=message, is_end_of_stream=False
+                sender=1,
+                receiver=2,
+                content=message,
             )
 
         yield ChatMessage(

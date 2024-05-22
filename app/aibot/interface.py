@@ -11,4 +11,6 @@ from app.model.chat import ChatMessage
 class AIBot(ABC):
     @abstractmethod
     async def ainvoke(self, input: ChatMessage) -> AsyncGenerator[ChatMessage, None]:
-        pass
+        yield ChatMessage(
+            sender=1, receiver=2, is_end_of_stream=True, content="Hello, World!"
+        )
