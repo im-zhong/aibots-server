@@ -2,6 +2,7 @@
 # zhangzhong
 # https://docs.sqlalchemy.org/en/20/tutorial/orm_data_manipulation.html
 
+import uuid
 from datetime import datetime
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
@@ -9,6 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.common.conf import conf
+from app.model.database import BotCreate
 
 from . import schema
 from .schema import Base, BotSchema, ChatSchema, MessageSchema, UserSchema
@@ -98,12 +100,24 @@ class DatabaseService:
     #     )
     #     return [u for u in users]
     #
-    # def create_bot(self, create: BotCreate) -> BotSchema:
-    #     # we did not include a primary key (i.e. an entry for the id column), since we would like to make use of the auto-incrementing primary key feature of the database,
-    #     bot = BotSchema(**create.model_dump())
-    #     self._session.add(bot)
-    #     self._session.commit()
-    #     return bot
+    async def create_bot(self, bot_create: BotCreate) -> BotSchema:
+        bot_dict = bot_create.model_dump()
+        bot_dict["knowledge_id"] = str(uuid.uuid4())
+        bot_dict["category"] = "chat_bot"
+        bot_dict["user_id"] = "f3e60362-40cc-463f-8f69-b0c8cd3a0b9d"
+        bot_dict.pop("knowledges")
+        bot = BotSchema(**bot_dict)
+        async with self.session.begin():
+            self.session.add(bot)
+            await self.session.commit()
+
+            # we did not include a primary key (i.e. an entry for the id column), since we would like to make use of the auto-incrementing primary key feature of the database,
+            # bot = BotSchema(**create.model_dump())
+            # self._session.add(bot)
+            # self._session.commit()
+        await self.session.refresh(bot)
+        return bot
+
     #
     # # TODO:
     # # 等真的把这些东西写出来，确实发现id这个名字不好
