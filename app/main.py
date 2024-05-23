@@ -1,17 +1,21 @@
+import os
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.common.conf import conf
 from app.router.auth import auth
 from app.router.chat import chat
+from app.router.knowledge import knowledge
 from app.storage.database import init_db
 
 
 # https://fastapi.tiangolo.com/advanced/events/
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    os.makedirs(conf.knowledge_file_base_dir, exist_ok=True)
     await init_db()
     yield
 
@@ -33,6 +37,7 @@ app.add_middleware(
 
 app.include_router(router=auth)
 app.include_router(router=chat)
+app.include_router(router=knowledge)
 
 
 @app.get("/")
