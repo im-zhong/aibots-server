@@ -45,6 +45,9 @@ class BotSchema(Base):
     memory_id: Mapped[str] = mapped_column(default="")
 
     associated_user: Mapped[UserSchema] = relationship(back_populates="bots")
+    associated_knowledges: Mapped[list["KnowledgeSchema"]] = relationship(
+        back_populates="bot_id"
+    )
 
 
 class ChatSchema(Base):
@@ -73,3 +76,28 @@ class MessageSchema(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
     associated_chat: Mapped[ChatSchema] = relationship(back_populates="messages")
+
+
+class KnowledgeSchema(Base):
+    __tablename__ = "knowledges"
+
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    topic: Mapped[str] = mapped_column()
+    bot_id: Mapped[UUID] = mapped_column(ForeignKey("bots.id"))
+
+    associated_points: Mapped[list["KnowledgePointSchema"]] = relationship(
+        back_populates="knowledge_id"
+    )
+
+
+class KnowledgePointSchema(Base):
+    __tablename__ = "knowledge_points"
+
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    knowledge_id: Mapped[UUID] = mapped_column(ForeignKey("knowledges.id"))
+    category: Mapped[str] = mapped_column()
+    path: Mapped[str] = mapped_column()
+
+    associated_knowledge: Mapped[KnowledgeSchema] = relationship(
+        back_populates="associated_points"
+    )

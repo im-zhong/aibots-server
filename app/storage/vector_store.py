@@ -46,7 +46,7 @@ class LoaderFactory:
 
 
 class KnowledgeBase:
-    def __init__(self, urls: list[str] = [], files: list[str] = []):
+    def __init__(self, knowledge_id: str, urls: list[str] = [], files: list[str] = []):
         documents: list[Document] = []
         for url in urls:
             documents.extend(WebBaseLoader(web_path=url).load())
@@ -59,7 +59,7 @@ class KnowledgeBase:
         documents = splitter.split_documents(documents=documents)
 
         # add metadata for multi tenancy
-        self.knowledge_id = str(uuid.uuid4())
+        self.knowledge_id = knowledge_id
         for doc in documents:
             doc.metadata["knowledge_id"] = self.knowledge_id
 

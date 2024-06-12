@@ -75,6 +75,10 @@ class BotCreate(BaseModel):
     # knowledge_id: str | None = Field(default=None, description="知识库ID")
     # memory_id: str | None = Field(default=None, description="记忆库ID")
     knowledges: list[str] = Field(default=[], description="文件ID")
+    prompt: str = Field(default="", description="提示")
+    web_search: bool = Field(default=False, description="是否开启网络搜索")
+    painting: bool = Field(default=False, description="是否开启绘画")
+    multi_model: bool = Field(default=False, description="是否开启多模型")
 
 
 #
@@ -112,6 +116,12 @@ class BotOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class KnowledgeCategory(Enum, str):
+    PDF = "pdf"
+    TXT = "txt"
+    WEB_PAGE = "web_page"
 
 
 #

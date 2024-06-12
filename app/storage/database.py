@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from model.database import KnowledgeCategory
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -13,7 +14,14 @@ from app.common.conf import conf
 from app.model.database import BotCreate
 
 from . import schema
-from .schema import Base, BotSchema, ChatSchema, MessageSchema, UserSchema
+from .schema import (
+    Base,
+    BotSchema,
+    ChatSchema,
+    KnowledgeSchema,
+    MessageSchema,
+    UserSchema,
+)
 
 engine = create_async_engine(url=conf.postgres_url)
 async_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
@@ -117,6 +125,28 @@ class DatabaseService:
             # self._session.commit()
         await self.session.refresh(bot)
         return bot
+
+    async def create_knowledge(
+        self,
+        bot_id: str,
+        topic: str,
+    ) -> KnowledgeSchema:
+        knowledge = KnowledgeSchema(bot_id=bot_id, topic=topic)
+        async with self.session.begin():
+            self.session.add(knowledge)
+            await self.session.commit()
+        await self.session.refresh(knowledge)
+        return knowledge
+
+    async def create_knowledge_point(
+        self, knowledge_id: str, category: KnowledgeCategory, path: str
+    ) -> None:
+        knowledge = await self.session.execute(
+            select(KnowledgeSchema).filter_by(id=knowledge_id)
+        ).scalar_one_or_none()
+        if knowledge:
+            knowledge.points.append(point)
+            await self.session.commit()
 
     #
     # # TODO:
