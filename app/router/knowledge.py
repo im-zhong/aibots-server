@@ -78,7 +78,7 @@ async def knowledge_upload(
     bot_id: Annotated[str, Form(description="bot id")],
     knowledge_id: Annotated[str, Form(description="knowledge id")],
     file: Annotated[UploadFile, File(description="knowledge file")],
-) -> str:
+):
     # knowledge_id = str(uuid.uuid4())
     filename = f"{knowledge_id}-{file.filename}"
     filename = os.path.join(conf.knowledge_file_base_dir, filename)
@@ -103,7 +103,7 @@ async def knowledge_upload(
     # 生成知识库的接口是什么，我写好了吗？
     # RetrievalFactory().
     create_knowledge(knowledge_id=knowledge_id, filename=filename)
-    return knowledge_id
+    # return knowledge_id
 
 
 @knowledge.post("/upload-webpage")
