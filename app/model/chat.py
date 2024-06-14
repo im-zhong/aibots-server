@@ -1,4 +1,5 @@
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -13,10 +14,6 @@ class ChatMessage(BaseModel):
     images: list[str] = []
 
 
-class AIBotCategory(str, Enum):
-    ROLE_PLAYER = "role_player"
-    DOC_RAG = "doc_rag"
-    WEB_RAG = "web_rag"
-    REPORTER = "reporter"
-    PAINTER = "painter"
-    CHAT_BOT = "chat_bot"
+class ChatCreate(BaseModel):
+    user_id: UUID
+    bot_id: UUID

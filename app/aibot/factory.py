@@ -2,7 +2,7 @@
 # zhangzhong
 # AIBotFactory
 
-from app.model.chat import AIBotCategory
+from app.model import AIBotCategory
 from app.storage.schema import MessageSchema
 
 # from .rag import RAG

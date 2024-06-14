@@ -15,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Base(AsyncAttrs, DeclarativeBase):
+class BaseSchema(AsyncAttrs, DeclarativeBase):
     pass
 
 
-class UserSchema(SQLAlchemyBaseUserTableUUID, Base):
+class UserSchema(SQLAlchemyBaseUserTableUUID, BaseSchema):
     __tablename__ = "users"
 
     name: Mapped[str] = mapped_column()
@@ -30,27 +30,31 @@ class UserSchema(SQLAlchemyBaseUserTableUUID, Base):
     chats: Mapped[list["ChatSchema"]] = relationship(back_populates="associated_user")
 
 
-class BotSchema(Base):
+class BotSchema(BaseSchema):
     __tablename__ = "bots"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(index=True)
     description: Mapped[str] = mapped_column()
-    category: Mapped[str] = mapped_column()
+    # category: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
     is_deleted: Mapped[bool] = mapped_column(default=False)
     is_shared: Mapped[bool] = mapped_column(default=False)
-    knowledge_id: Mapped[str] = mapped_column(default="")
+    # knowledges: Mapped[list[str]] = mapped_column(default=[])
     memory_id: Mapped[str] = mapped_column(default="")
+    prompt: Mapped[str] = mapped_column(default="")
+    web_search: Mapped[bool] = mapped_column(default=False)
+    painting: Mapped[bool] = mapped_column(default=False)
+    multi_model: Mapped[bool] = mapped_column(default=False)
 
     associated_user: Mapped[UserSchema] = relationship(back_populates="bots")
-    associated_knowledges: Mapped[list["KnowledgeSchema"]] = relationship(
-        back_populates="bot_id"
+    knowledges: Mapped[list["KnowledgeSchema"]] = relationship(
+        back_populates="associated_bot"
     )
 
 
-class ChatSchema(Base):
+class ChatSchema(BaseSchema):
     __tablename__ = "chats"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
@@ -65,7 +69,7 @@ class ChatSchema(Base):
     )
 
 
-class MessageSchema(Base):
+class MessageSchema(BaseSchema):
     __tablename__ = "messages"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
@@ -78,26 +82,30 @@ class MessageSchema(Base):
     associated_chat: Mapped[ChatSchema] = relationship(back_populates="messages")
 
 
-class KnowledgeSchema(Base):
+class KnowledgeSchema(BaseSchema):
     __tablename__ = "knowledges"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     topic: Mapped[str] = mapped_column()
     bot_id: Mapped[UUID] = mapped_column(ForeignKey("bots.id"))
 
-    associated_points: Mapped[list["KnowledgePointSchema"]] = relationship(
-        back_populates="knowledge_id"
+    associated_bot: Mapped[BotSchema] = relationship(back_populates="knowledges")
+    points: Mapped[list["KnowledgePointSchema"]] = relationship(
+        back_populates="associated_knowledge"
     )
 
 
-class KnowledgePointSchema(Base):
+class KnowledgePointSchema(BaseSchema):
     __tablename__ = "knowledge_points"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     knowledge_id: Mapped[UUID] = mapped_column(ForeignKey("knowledges.id"))
-    category: Mapped[str] = mapped_column()
-    path: Mapped[str] = mapped_column()
+    # category: Mapped[str] = mapped_column()
+    path_or_url: Mapped[str] = mapped_column()
 
     associated_knowledge: Mapped[KnowledgeSchema] = relationship(
-        back_populates="associated_points"
+        back_populates="points"
     )
+
+    def is_url(self) -> bool:
+        return "http" in self.path_or_url

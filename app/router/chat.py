@@ -10,7 +10,7 @@ from app.aibot.chatbot import ChatBot
 from app.model.chat import ChatMessage
 
 # from app.dependency import get_db, get_token_data, get_user
-from app.storage.database import DatabaseService, schema
+from app.storage.database import Database
 from app.storage.schema import MessageSchema
 
 chat = APIRouter()

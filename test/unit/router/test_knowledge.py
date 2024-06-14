@@ -8,6 +8,16 @@ from app.main import app
 client = TestClient(app=app)
 
 
+def test_create_knowledge():
+    client.post(
+        url="/api/knowledge/create",
+        json={
+            "bot_id": "1",
+            "topic": "temp",
+        },
+    )
+
+
 def test_create_knowledge_by_upload_file():
     response = client.post(
         url="/api/knowledge/upload",
@@ -34,13 +44,3 @@ def test_create_knowledge_point_by_upload_url():
     assert response.status_code == 200
     knowledge_id: str = response.json()
     print(knowledge_id)
-
-
-def test_create_knowledge():
-    client.post(
-        url="/api/knowledge/create",
-        json={
-            "bot_id": "1",
-            "topic": "temp",
-        },
-    )

@@ -8,9 +8,23 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
+
+# 但是你要真这样引用起来还是挺麻烦的
+# 不如还是从 app.model 里面进行全部的引用，但是在实现上我们进行一个区分
+# from app.model.bot import BotCreate
+# # from app.model.chat import ChatCreate,
+# from app.model.user import UserCreate
 from app.model import BotCreate, ChatCreate, UserCreate
-from app.storage.database import DatabaseService
+from app.storage.database import AsyncSession, Database, async_session_maker
 from app.storage.schema import BotSchema, ChatSchema, MessageSchema, UserSchema
+
+# model定义为什么要单独分一个模块呢？
+# 为什么这些定义不能和直接使用它的地方紧密的结合起来呢？
+# 算了，这个东西的定义同时被两个地方使用 router + database
+# 还是放到一个单独的模块进行定义
+# 关键问题时这些东西应该放到那个模块？
+# 其实也很难说清
+
 
 client = TestClient(app)
 
@@ -24,17 +38,22 @@ def random_character_category() -> str:
     return random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"])
 
 
+def random_email() -> str:
+    return f"{random_name()}@test.com"
+
+
 def random_name() -> str:
     return str(uuid.uuid4())
 
 
-def random_bot(user_id: int) -> BotCreate:
+def random_bot(user_id: uuid.UUID) -> BotCreate:
     return BotCreate(
         user_id=user_id,
         name="test",
         description="random character description",
         # avatar_url=default_character_avatar_url(),
-        category=random_character_category(),
+        # 以后不在有category 因为所有的bot都是agent，有区别的只有他们的能力
+        # category=random_character_category(),
     )
 
 
@@ -43,37 +62,38 @@ def random_bot(user_id: int) -> BotCreate:
 # 这样我们就可以进行下一个测试
 
 
-class DatabaseUtil:
-    def __init__(self):
-        self.db = DatabaseService()
-
-    def create_user(self) -> UserSchema:
-        name = str(uuid.uuid4())
-        password = str(uuid.uuid4())
-        description = str(uuid.uuid4())
-
-        user = self.db.create_user(
-            create=UserCreate(
-                email=name,
-                name=name,
-                password=password,
+class DBUtil:
+    # TIP: 通过这个函数创建的user无法登录
+    @staticmethod
+    async def create_random_user() -> UserSchema:
+        async with async_session_maker() as session:
+            return await Database(session=session).user_db.create(
+                create_dict={
+                    "name": random_name(),
+                    "email": random_email(),
+                    "hashed_password": random_name(),
+                }
             )
-        )
-        return user
 
-    def create_bot(self, user: UserSchema) -> BotSchema:
-        character = self.db.create_bot(create=random_bot(user_id=user.id))
-        return character
-
-    def create_chat(self, user: UserSchema, bot: BotSchema) -> ChatSchema:
-        chat = self.db.create_chat(
-            ChatCreate(
-                user_id=user.id,
-                bot_id=bot.id,
+    @staticmethod
+    async def create_random_bot(user: UserSchema) -> BotSchema:
+        async with async_session_maker() as session:
+            return await Database(session=session).create_bot(
+                bot_create=random_bot(user_id=user.id)
             )
-        )
-        return chat
 
+    @staticmethod
+    async def create_random_chat(user: UserSchema, bot: BotSchema) -> ChatSchema:
+        async with async_session_maker() as session:
+            return await Database(session=session).create_chat(
+                chat_create=ChatCreate(
+                    user_id=user.id,
+                    bot_id=bot.id,
+                )
+            )
+
+
+db_util = DBUtil()
 
 # def create_random_user() -> UserSchema:
 #     db = DatabaseService()

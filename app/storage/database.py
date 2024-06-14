@@ -6,18 +6,18 @@ import uuid
 from datetime import datetime
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
-from model.database import KnowledgeCategory
+from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.common.conf import conf
-from app.model.database import BotCreate
+from app.model import BotCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
 
-from . import schema
 from .schema import (
-    Base,
+    BaseSchema,
     BotSchema,
     ChatSchema,
+    KnowledgePointSchema,
     KnowledgeSchema,
     MessageSchema,
     UserSchema,
@@ -29,18 +29,19 @@ async_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(BaseSchema.metadata.drop_all)
+        await conn.run_sync(BaseSchema.metadata.create_all)
 
 
 # TODO: 因为fastapiusers使用了async 所以我们的数据库实现和测试都要重写
 # I have an idea, 我们的这个DatabaseService可以继承fastapiusers 的那个呀
 # 这样很多函数就不需要重复的写了，然后又可以加上其他的数据库操作 完美！
 # 不行，他的很多函数名字起的不好，我们还是得给他包装一下
-class DatabaseService:
+class Database:
     # 我懂了，把session的创建和对数据的操作解开
     # 也就是database服务的创建传入一个session即可
     # 就想fastapiusers那样实现就ok
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession):
         # create a session by my self
         # self._session = SessionLocal()
         # 但是在这里创建好像不太行？因为session需要在一个 async context manager里面创建才行
@@ -110,28 +111,21 @@ class DatabaseService:
     #
     async def create_bot(self, bot_create: BotCreate) -> BotSchema:
         bot_dict = bot_create.model_dump()
-        bot_dict["knowledge_id"] = str(uuid.uuid4())
-        bot_dict["category"] = "chat_bot"
-        bot_dict["user_id"] = "f3e60362-40cc-463f-8f69-b0c8cd3a0b9d"
-        bot_dict.pop("knowledges")
+        # bot_dict["knowledge_id"] = str(uuid.uuid4())
+        # bot_dict["category"] = "chat_bot"
+        # bot_dict["user_id"] = "f3e60362-40cc-463f-8f69-b0c8cd3a0b9d"
+        # bot_dict.pop("knowledges")
         bot = BotSchema(**bot_dict)
         async with self.session.begin():
             self.session.add(bot)
             await self.session.commit()
-
-            # we did not include a primary key (i.e. an entry for the id column), since we would like to make use of the auto-incrementing primary key feature of the database,
-            # bot = BotSchema(**create.model_dump())
-            # self._session.add(bot)
-            # self._session.commit()
         await self.session.refresh(bot)
         return bot
 
     async def create_knowledge(
-        self,
-        bot_id: str,
-        topic: str,
+        self, knowledge_create: KnowledgeCreate
     ) -> KnowledgeSchema:
-        knowledge = KnowledgeSchema(bot_id=bot_id, topic=topic)
+        knowledge = KnowledgeSchema(**knowledge_create.model_dump())
         async with self.session.begin():
             self.session.add(knowledge)
             await self.session.commit()
@@ -139,14 +133,14 @@ class DatabaseService:
         return knowledge
 
     async def create_knowledge_point(
-        self, knowledge_id: str, category: KnowledgeCategory, path: str
-    ) -> None:
-        knowledge = await self.session.execute(
-            select(KnowledgeSchema).filter_by(id=knowledge_id)
-        ).scalar_one_or_none()
-        if knowledge:
-            knowledge.points.append(point)
+        self, knowledge_point_create: KnowledgePointCreate
+    ) -> KnowledgePointSchema:
+        knowledge_point = KnowledgePointSchema(**knowledge_point_create.model_dump())
+        async with self.session.begin():
+            self.session.add(knowledge_point)
             await self.session.commit()
+        await self.session.refresh(knowledge_point)
+        return knowledge_point
 
     #
     # # TODO:
@@ -179,11 +173,14 @@ class DatabaseService:
     #     )
     #
     # # chats
-    # def create_chat(self, chat_create: ChatCreate) -> ChatSchema:
-    #     chat = ChatSchema(**chat_create.model_dump())
-    #     self._session.add(chat)
-    #     self._session.commit()
-    #     return chat
+    async def create_chat(self, chat_create: ChatCreate) -> ChatSchema:
+        chat = ChatSchema(**chat_create.model_dump())
+        async with self.session.begin():
+            self.session.add(chat)
+            await self.session.commit()
+        await self.session.refresh(chat)
+        return chat
+
     #
     # def delete_chat(self, chat_id: int) -> None:
     #     db_chat = self._session.execute(

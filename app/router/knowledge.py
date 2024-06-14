@@ -7,6 +7,7 @@ import asyncio
 import os
 import uuid
 from typing import Annotated
+from uuid import UUID
 
 import aiofiles
 from fastapi import (
@@ -21,8 +22,13 @@ from fastapi import (
 )
 
 from app.common.conf import conf
+
+# TODO: 其实category不是必须的，因为path还是url可以通过 local:// 和 http:// 来区分
+# 而文件的种类可以通过后缀来区分 所以实际上不需要category
+from app.model import KnowledgeCreate, KnowledgePointCategory, KnowledgePointCreate
 from app.router.dependency import AsyncSession, get_db
-from app.storage.database import DatabaseService, async_session_maker
+from app.storage.database import Database, async_session_maker
+from app.storage.schema import KnowledgePointSchema
 from app.storage.vector_store import KnowledgeBase
 
 knowledge = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
@@ -36,9 +42,7 @@ knowledge = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 # 直接放到向量数据库里面就行
 
 
-async def create_knowledge(
-    bot_id: str, knowledge_id: str, filename: str = None, url: str = None
-):
+async def create_knowledge_indexing(knowledge_point: KnowledgePointSchema):
     # 用户每次上传的都是一个个的知识点
     # 用户一次只能上传一个文件或者一个网页
     # 不对 在用户端是可以上传多个的
@@ -48,36 +52,46 @@ async def create_knowledge(
     # 之后也可以在同主题上增加新的知识，也可以增加新的主题
     # TODO: vector store也可以做async，这样就不会阻塞了，太棒了！
     # https://python.langchain.com/v0.1/docs/modules/data_connection/vectorstores/#asynchronous-operations
-    knowledge = KnowledgeBase(knowledge_id=knowledge_id, urls=[url], files=[filename])
+    path_or_url = knowledge_point.path_or_url
+    if path_or_url.startswith(("www", "http")):
+        url = path_or_url
+    else:
+        file = path_or_url
+    knowledge = KnowledgeBase(
+        knowledge_id=str(knowledge_point.knowledge_id),
+        urls=[url],
+        files=[file],
+    )
     # 然后在数据库中添加知识
     # 要不还是把文件和url保留下来吧，后端可以做一个留存
     # 但是其实并没有什么用处就是了
     # asyncio.get_event_loop().create_task(knowledge.vector_store.create())
-    async with async_session_maker() as session:
-        db = DatabaseService(session=session)
-        db.create_knowledge_point(
-            knowledge_id=knowledge_id, path=filename if filename else url
-        )
+    # async with async_session_maker() as session:
+    #     db = Database(session=session)
+    #     db.create_knowledge_point(
+    #         knowledge_point_create=KnowledgePointCreate(knowledge_id=knowledge_id)
+    #         knowledge_id=knowledge_id, path=filename if filename else url
+    #     )
     pass
 
 
 @knowledge.post("/create")
-async def knowledge_create(
-    bot_id: str = Body(..., description="bot id"),
-    topic: str = Body(..., description="knowledge topic"),
-    db: DatabaseService = Depends(get_db),
+async def create_knowledge(
+    knowledge_create: KnowledgeCreate, db: Database = Depends(get_db)
 ) -> str:
-    knowledge = await db.create_knowledge(bot_id=bot_id, topic=topic)
+    knowledge = await db.create_knowledge(knowledge_create=knowledge_create)
     return str(knowledge.id)
 
 
 # TODO: 改一下名字，上传文件和上传webpage的接口可以分开
 # 毕竟后端处理起来也不一样，前端处理也不一样
-@knowledge.post("/upload")
+@knowledge.post("/upload-file")
 async def knowledge_upload(
-    bot_id: Annotated[str, Form(description="bot id")],
-    knowledge_id: Annotated[str, Form(description="knowledge id")],
+    # bot_id: Annotated[str, Form(description="bot id")],
+    knowledge_id: Annotated[UUID, Form(description="knowledge id")],
     file: Annotated[UploadFile, File(description="knowledge file")],
+    db: Annotated[Database, Depends(get_db)],
+    background_tasks: BackgroundTasks,
 ):
     # knowledge_id = str(uuid.uuid4())
     filename = f"{knowledge_id}-{file.filename}"
@@ -102,28 +116,53 @@ async def knowledge_upload(
     # TODO：2
     # 生成知识库的接口是什么，我写好了吗？
     # RetrievalFactory().
-    create_knowledge(knowledge_id=knowledge_id, filename=filename)
+    # create_knowledge(knowledge_id=knowledge_id, filename=filename)
     # return knowledge_id
+    knowledge_point = await db.create_knowledge_point(
+        knowledge_point_create=KnowledgePointCreate(
+            knowledge_id=knowledge_id,
+            path_or_url=filename,
+            category=KnowledgePointCategory.PDF,
+        )
+    )
+    background_tasks.add_task(
+        # 我们真正做的是生成知识库 其实就是学习知识的过程
+        # 这个过程在langchain里面叫啥来着
+        # split load, then retrieval
+        # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
+        # 叫做indexing
+        create_knowledge_indexing,
+        knowledge_point=knowledge_point,
+    )
+    return str(knowledge_point.id)
 
 
-@knowledge.post("/upload-webpage")
+@knowledge.post("/upload-url")
 async def knowledge_upload_webpage(
-    bot_id: Annotated[str, Form(description="bot id")],
-    knowledge_id: Annotated[str, Form(description="knowledge id")],
-    url: Annotated[str, Form(description="webpage url")],
-    topic: Annotated[str, Form(description="knowledge topic")],
+    # bot_id: Annotated[str, Form(description="bot id")],
+    # knowledge_id: Annotated[str, Form(description="knowledge id")],
+    # url: Annotated[str, Form(description="webpage url")],
+    # topic: Annotated[str, Form(description="knowledge topic")],
+    knowledge_point_create: KnowledgePointCreate,
     background_tasks: BackgroundTasks,
-    db: Annotated[DatabaseService, Depends(get_db)],
+    db: Annotated[Database, Depends(get_db)],
 ) -> str:
     # knowledge_id = str(uuid.uuid4())
-    background_tasks.add_task(
-        create_knowledge,
-        knowledge_id=knowledge_id,
-        url=url,
+
+    knowledge_point = await db.create_knowledge_point(
+        knowledge_point_create=knowledge_point_create
     )
-    await db.create_knowledge(bot_id=bot_id, knowledge_id=knowledge_id, url=url)
+    background_tasks.add_task(
+        # 我们真正做的是生成知识库 其实就是学习知识的过程
+        # 这个过程在langchain里面叫啥来着
+        # split load, then retrieval
+        # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
+        # 叫做indexing
+        create_knowledge_indexing,
+        knowledge_point=knowledge_point,
+    )
     # 在数据库中添加相关词条
-    return knowledge_id
+    return str(knowledge_point.id)
 
 
 # @knowledge.get("/list")
