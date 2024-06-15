@@ -29,7 +29,9 @@ from app.model import KnowledgeCreate, KnowledgePointCategory, KnowledgePointCre
 from app.router.dependency import AsyncSession, get_db
 from app.storage.database import Database, async_session_maker
 from app.storage.schema import KnowledgePointSchema
-from app.storage.vector_store import KnowledgeBase
+from app.storage.vector_store import vector_store
+
+# from app.storage.vector_store import KnowledgeBase
 
 knowledge = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
@@ -51,17 +53,17 @@ async def create_knowledge_indexing(knowledge_point: KnowledgePointSchema):
     # 每个知识可以是多个文件，但是应该属于同一个主题
     # 之后也可以在同主题上增加新的知识，也可以增加新的主题
     # TODO: vector store也可以做async，这样就不会阻塞了，太棒了！
-    # https://python.langchain.com/v0.1/docs/modules/data_connection/vectorstores/#asynchronous-operations
-    path_or_url = knowledge_point.path_or_url
-    if path_or_url.startswith(("www", "http")):
-        url = path_or_url
-    else:
-        file = path_or_url
-    knowledge = KnowledgeBase(
-        knowledge_id=str(knowledge_point.knowledge_id),
-        urls=[url],
-        files=[file],
-    )
+    # # https://python.langchain.com/v0.1/docs/modules/data_connection/vectorstores/#asynchronous-operations
+    # path_or_url = knowledge_point.path_or_url
+    # if path_or_url.startswith(("www", "http")):
+    #     url = path_or_url
+    # else:
+    #     file = path_or_url
+    # knowledge = KnowledgeBase(
+    #     knowledge_id=str(knowledge_point.knowledge_id),
+    #     urls=[url],
+    #     files=[file],
+    # )
     # 然后在数据库中添加知识
     # 要不还是把文件和url保留下来吧，后端可以做一个留存
     # 但是其实并没有什么用处就是了
@@ -72,7 +74,10 @@ async def create_knowledge_indexing(knowledge_point: KnowledgePointSchema):
     #         knowledge_point_create=KnowledgePointCreate(knowledge_id=knowledge_id)
     #         knowledge_id=knowledge_id, path=filename if filename else url
     #     )
-    pass
+    await vector_store.add_knowledge_point(
+        knowledge_id=str(knowledge_point.knowledge_id),
+        file_or_url=knowledge_point.path_or_url,
+    )
 
 
 @knowledge.post(path="/create")
@@ -144,27 +149,37 @@ async def knowledge_upload(
 @knowledge.post("/upload-url")
 async def knowledge_upload_webpage(
     # bot_id: Annotated[str, Form(description="bot id")],
-    # knowledge_id: Annotated[str, Form(description="knowledge id")],
-    # url: Annotated[str, Form(description="webpage url")],
+    knowledge_id: Annotated[UUID, Body(description="knowledge id")],
+    url: Annotated[str, Body(description="webpage url")],
     # topic: Annotated[str, Form(description="knowledge topic")],
-    knowledge_point_create: KnowledgePointCreate,
+    # 不对，我们在这里使用这个东西是不对的
+    # 因为在前端上传链接和文件是不一样的
+    # 所以调用的时候肯定不一样
+    # 所以这里可以指定一个url 而传文件只能通过form
+    # 所以这个是不可能通用的
+    # knowledge_point_create: KnowledgePointCreate,
     background_tasks: BackgroundTasks,
     db: Annotated[Database, Depends(get_db)],
 ) -> str:
     # knowledge_id = str(uuid.uuid4())
 
     knowledge_point = await db.create_knowledge_point(
-        knowledge_point_create=knowledge_point_create
+        knowledge_point_create=KnowledgePointCreate(
+            knowledge_id=knowledge_id,
+            path_or_url=url,
+            # category=KnowledgePointCategory.WEB_PAGE,
+        )
     )
-    background_tasks.add_task(
-        # 我们真正做的是生成知识库 其实就是学习知识的过程
-        # 这个过程在langchain里面叫啥来着
-        # split load, then retrieval
-        # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
-        # 叫做indexing
-        create_knowledge_indexing,
-        knowledge_point=knowledge_point,
-    )
+    # background_tasks.add_task(
+    #     # 我们真正做的是生成知识库 其实就是学习知识的过程
+    #     # 这个过程在langchain里面叫啥来着
+    #     # split load, then retrieval
+    #     # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
+    #     # 叫做indexing
+    #     func=create_knowledge_indexing,
+    #     knowledge_point=knowledge_point,
+    # )
+    await create_knowledge_indexing(knowledge_point=knowledge_point)
     # 在数据库中添加相关词条
     return str(knowledge_point.id)
 

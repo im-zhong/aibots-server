@@ -78,13 +78,14 @@ async def test_create_knowledge_by_upload_file():
     print(knowledge_id)
 
 
-def test_create_knowledge_point_by_upload_url():
+async def test_create_knowledge_point_by_upload_url():
+
+    knowledge = await db_util.create_temp_knowledge()
     response = client.post(
-        url="/api/knowledge/upload",
+        url="/api/knowledge/upload-url",
         json={
-            "bot_id": "1",
-            "knowledge_id": "2",
-            "url": "https://www.baidu.com",
+            "knowledge_id": str(knowledge.id),
+            "url": "https://python.langchain.com/v0.2/docs/integrations/vectorstores/qdrant/",
         },
     )
     assert response.status_code == 200

@@ -139,6 +139,10 @@ class Conf:
         return self._qdrant.host
 
     @property
+    def qdrant_url(self) -> str:
+        return f"http://{self._qdrant.host}"
+
+    @property
     def qdrant_prefer_grpc(self) -> bool:
         return self._qdrant.prefer_grpc
 
