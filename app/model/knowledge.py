@@ -20,5 +20,5 @@ class KnowledgeCreate(BaseModel):
 
 class KnowledgePointCreate(BaseModel):
     knowledge_id: UUID
-    category: KnowledgePointCategory
+    # category: KnowledgePointCategory
     path_or_url: str

@@ -14,9 +14,15 @@ from app.main import app
 # from app.model.bot import BotCreate
 # # from app.model.chat import ChatCreate,
 # from app.model.user import UserCreate
-from app.model import BotCreate, ChatCreate, UserCreate
+from app.model import BotCreate, ChatCreate, KnowledgeCreate, UserCreate
 from app.storage.database import AsyncSession, Database, async_session_maker
-from app.storage.schema import BotSchema, ChatSchema, MessageSchema, UserSchema
+from app.storage.schema import (
+    BotSchema,
+    ChatSchema,
+    KnowledgeSchema,
+    MessageSchema,
+    UserSchema,
+)
 
 # model定义为什么要单独分一个模块呢？
 # 为什么这些定义不能和直接使用它的地方紧密的结合起来呢？
@@ -76,19 +82,43 @@ class DBUtil:
             )
 
     @staticmethod
-    async def create_random_bot(user: UserSchema) -> BotSchema:
+    async def create_random_bot(user: UserSchema | None = None) -> BotSchema:
+        if user is None:
+            user = await DBUtil.create_random_user()
         async with async_session_maker() as session:
             return await Database(session=session).create_bot(
                 bot_create=random_bot(user_id=user.id)
             )
 
     @staticmethod
-    async def create_random_chat(user: UserSchema, bot: BotSchema) -> ChatSchema:
+    async def create_random_chat(
+        user: UserSchema | None = None, bot: BotSchema | None = None
+    ) -> ChatSchema:
+        if user is None:
+            user = await DBUtil.create_random_user()
+        if bot is None:
+            bot = await DBUtil.create_random_bot(user=user)
         async with async_session_maker() as session:
             return await Database(session=session).create_chat(
                 chat_create=ChatCreate(
                     user_id=user.id,
                     bot_id=bot.id,
+                )
+            )
+
+    @staticmethod
+    async def create_temp_knowledge(
+        user: UserSchema | None = None, bot: BotSchema | None = None
+    ) -> KnowledgeSchema:
+        if user is None:
+            user = await DBUtil.create_random_user()
+        if bot is None:
+            bot = await DBUtil.create_random_bot(user=user)
+        async with async_session_maker() as session:
+            return await Database(session=session).create_knowledge(
+                knowledge_create=KnowledgeCreate(
+                    bot_id=bot.id,
+                    topic="temp",
                 )
             )
 

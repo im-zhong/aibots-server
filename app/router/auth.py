@@ -20,11 +20,11 @@ from app.router.dependency import get_user_manager
 from app.storage.schema import UserSchema
 
 cookie_transport = CookieTransport(cookie_max_age=3600)
-redis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
+myredis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
 
 
 def get_redis_strategy() -> RedisStrategy:
-    return RedisStrategy(redis, lifetime_seconds=3600)
+    return RedisStrategy(myredis, lifetime_seconds=3600)
 
 
 auth_backend = AuthenticationBackend(

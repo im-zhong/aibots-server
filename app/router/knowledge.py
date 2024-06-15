@@ -75,7 +75,7 @@ async def create_knowledge_indexing(knowledge_point: KnowledgePointSchema):
     pass
 
 
-@knowledge.post("/create")
+@knowledge.post(path="/create")
 async def create_knowledge(
     knowledge_create: KnowledgeCreate, db: Database = Depends(get_db)
 ) -> str:
@@ -85,7 +85,7 @@ async def create_knowledge(
 
 # TODO: 改一下名字，上传文件和上传webpage的接口可以分开
 # 毕竟后端处理起来也不一样，前端处理也不一样
-@knowledge.post("/upload-file")
+@knowledge.post(path="/upload-file")
 async def knowledge_upload(
     # bot_id: Annotated[str, Form(description="bot id")],
     knowledge_id: Annotated[UUID, Form(description="knowledge id")],
@@ -122,18 +122,22 @@ async def knowledge_upload(
         knowledge_point_create=KnowledgePointCreate(
             knowledge_id=knowledge_id,
             path_or_url=filename,
-            category=KnowledgePointCategory.PDF,
+            # category=KnowledgePointCategory.PDF,
         )
     )
-    background_tasks.add_task(
-        # 我们真正做的是生成知识库 其实就是学习知识的过程
-        # 这个过程在langchain里面叫啥来着
-        # split load, then retrieval
-        # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
-        # 叫做indexing
-        create_knowledge_indexing,
-        knowledge_point=knowledge_point,
-    )
+    # TODO
+    # 讲道理，写成background不好测试
+    # 先不用了吧 都测好了再改成backgrou的task
+    # background_tasks.add_task(
+    #     # 我们真正做的是生成知识库 其实就是学习知识的过程
+    #     # 这个过程在langchain里面叫啥来着
+    #     # split load, then retrieval
+    #     # https://python.langchain.com/v0.2/docs/tutorials/rag/#indexing
+    #     # 叫做indexing
+    #     func=create_knowledge_indexing,
+    #     knowledge_point=knowledge_point,
+    # )
+    await create_knowledge_indexing(knowledge_point=knowledge_point)
     return str(knowledge_point.id)
 
 

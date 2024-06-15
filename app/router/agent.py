@@ -3,7 +3,7 @@
 
 from fastapi import APIRouter, Depends
 
-from app.model.database import BotCreate, BotOut
+# from app.model.database import BotCreate, BotOut
 from app.router.dependency import get_db
 from app.storage.database import Database
 

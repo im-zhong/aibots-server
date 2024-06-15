@@ -1,6 +1,6 @@
 # 2024/5/9
 # zhangzhong
-
+# https://python.langchain.com/v0.1/docs/modules/data_connection/vectorstores/#asynchronous-operations
 
 import uuid
 
@@ -87,3 +87,12 @@ class KnowledgeBase:
 
     def get_knowledge_id(self) -> str:
         return self.knowledge_id
+
+
+class VectorStore:
+    def __init__(self, knowledge_id: str):
+        self.knowledge_id = knowledge_id
+
+    def create(self):
+        knowledge_id = str(uuid.uuid4())
+        return KnowledgeBase(knowledge_id=knowledge_id)

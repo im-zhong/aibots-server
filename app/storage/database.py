@@ -9,6 +9,7 @@ from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.common.conf import conf
 from app.model import BotCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
@@ -23,7 +24,12 @@ from .schema import (
     UserSchema,
 )
 
-engine = create_async_engine(url=conf.postgres_url)
+engine = create_async_engine(
+    url=conf.postgres_url,
+    # https://stackoverflow.com/questions/75252097/fastapi-testing-runtimeerror-task-attached-to-a-different-loop
+    # https://github.com/encode/starlette/issues/1315
+    poolclass=NullPool,
+)
 async_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
