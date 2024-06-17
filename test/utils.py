@@ -14,7 +14,7 @@ from app.main import app
 # from app.model.bot import BotCreate
 # # from app.model.chat import ChatCreate,
 # from app.model.user import UserCreate
-from app.model import BotCreate, ChatCreate, KnowledgeCreate, UserCreate
+from app.model import BotCreate, ChatCreate, KnowledgeCreate, UserCreate, UserOut
 from app.storage.database import AsyncSession, Database, async_session_maker
 from app.storage.schema import (
     BotSchema,
@@ -175,13 +175,31 @@ class MyTestClient:
 
     # 我们还要写一个context manager 来模拟websocket chat
 
+    # https://fastapi-users.github.io/fastapi-users/latest/usage/routes/
+    def login(self, username: str, password: str) -> str:
+        response = self.client.post(
+            url="/api/auth/login",
+            data={"username": username, "password": password},
+        )
+        assert response.status_code == 200, f"login failed: {response.text}"
 
-class MyChatClient:
-    def __init__(self) -> None:
-        self.client = MyTestClient()
+    def register(self, user_create: UserCreate) -> UserOut:
+        response = self.client.post(
+            url="/api/auth/register",
+            json=user_create.model_dump(),
+        )
+        assert response.status_code == 201, f"register failed: {response}"
+        return UserOut(**response.json())
 
-    def create_chat(self, chat_create: ChatCreate) -> ChatSchema:
-        return self.client.create_chat(chat_create=chat_create)
+    def request_verify_token(self, email: str):
+        response = self.client.post(
+            url="/api/auth/request-verify-token",
+            json={"email": email},
+        )
+        assert response.status_code == 202, f"request verify token failed: {response}"
+        # 正常来说，我们是拿不到这个token的，因为真正的token会发邮件给用户
+        # 但是我们这里是测试，所以我们可以从数据库中直接读取token 返回
+        # 这样就很方便测试了
 
 
 my_client = MyTestClient()

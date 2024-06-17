@@ -53,3 +53,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[UserSchema, UUID]):
             message=f"请点击以下链接以确认您的注册账号: http://localhost:3000/auth/verify-email/{token}",
             to_email=user.email,
         )
+        # TODO:
+        # 我们这里需要把token保存起来，保存到redis里面吧
+        # 方便后续进行测试
