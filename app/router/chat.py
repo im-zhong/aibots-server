@@ -2,16 +2,21 @@
 # zhangzhong
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, WebSocket
+from langchain.tools import BaseTool
 
 from app.aibot import AIBotFactory
+from app.aibot.agent import Agent
 from app.aibot.chatbot import ChatBot
 from app.model.chat import ChatMessage
+from app.router.dependency import get_db
 
 # from app.dependency import get_db, get_token_data, get_user
 from app.storage.database import Database
-from app.storage.schema import MessageSchema
+from app.storage.schema import BotSchema, ChatSchema, MessageSchema
+from app.tool import RetrieverToolFactory, dalle_tool, search_tool
 
 chat = APIRouter()
 
@@ -19,6 +24,27 @@ chat = APIRouter()
 # https://devcenter.heroku.com/articles/websocket-security#wss
 
 
+def create_tools_from_bot(bot: BotSchema) -> list[BaseTool]:
+    # 2. second, according to the bot, instance an agent
+    tools = []
+    if bot.web_search:
+        tools.append(search_tool)
+    if bot.painting:
+        tools.append(dalle_tool)
+    # 3. last, according to the knowledge, instance retrieval
+    for knowledge in bot.knowledges:
+        # every knowledge have an id
+        # we should instance a retriever only from this knowledge id
+        retrieval_tool = RetrieverToolFactory(knowledge=knowledge).new()
+        tools.append(retrieval_tool)
+    return tools
+
+
+# 不论如何，我们都可以先创建一个chat
+# 拿到他的chatid
+# 然后再调用本聊天接口 传入chatid
+# 这样就不用区分这个聊天是不是有聊天记录了
+# 就只需要写一个接口了
 @chat.websocket("/ws/chat")
 async def websocket_endpoint(
     # db: Annotated[DatabaseService, Depends(get_db)],
@@ -26,12 +52,22 @@ async def websocket_endpoint(
     # cid: int,
     # token: str,
     # chat_id: int | None = None,
+    chat_id: str,
+    db: Database = Depends(get_db),
 ):
     # token_data = await get_token_data(token=token)
     # user = get_user(token_data=token_data, db=db)
 
     try:
         await websocket.accept()
+
+        # 首先访问数据库
+        chat = await db.get_chat_else_throw(chat_id=UUID(chat_id))
+
+        # instance an agent from this chat
+        # 1. first, get the bot from this chat
+        bot = await db.get_bot_else_throw(bot_id=chat.bot_id)
+
         # character = db.get_character(cid=cid)
         # chat_history: list[MessageSchema] = []
         # if chat_id is not None:
@@ -41,16 +77,26 @@ async def websocket_endpoint(
         #     chat = db.create_chat(chat_create=model.ChatCreate(uid=user.uid, cid=cid))
         #     chat_id = chat.chat_id
 
-        aibot = AIBotFactory(
-            # chat_id=chat_id,
-            # uid=user.uid,
-            # cid=character.cid,
-            # name=character.name,
-            # category=character.category,
-            # description=character.description,
-            # chat_history=chat_history,
-            # knowledge_id=character.knowledge_id,
-        ).new()
+        # aibot = AIBotFactory(
+        #     # chat_id=chat_id,
+        #     # uid=user.uid,
+        #     # cid=character.cid,
+        #     # name=character.name,
+        #     # category=character.category,
+        #     # description=character.description,
+        #     # chat_history=chat_history,
+        #     # knowledge_id=character.knowledge_id,
+        # ).new()
+
+        # 从chat数据库中引入聊天记录
+        # 同时在聊天的时候，将聊天记录继续加入到数据库中
+        aibot = Agent(
+            prompt=bot.prompt,
+            tools=create_tools_from_bot(bot=bot),
+            messages=chat.messages,
+        )
+
+        # 图片使用base64编码保存可以极大的简化代码，太棒了
 
         while True:
 

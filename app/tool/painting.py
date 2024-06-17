@@ -6,7 +6,10 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool, StructuredTool, tool
 from openai import OpenAI
 
-client = OpenAI()
+client = OpenAI(
+    api_key="sk-ZwL10bd1199a7d452d6c1f614426f8a9b7678138996PT0kP",  # type: ignore
+    base_url="https://api.gptsapi.net/v1",
+)
 
 
 @tool

@@ -4,6 +4,7 @@
 
 import uuid
 from datetime import datetime
+from uuid import UUID
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from pydantic import BaseModel
@@ -128,6 +129,15 @@ class Database:
         await self.session.refresh(bot)
         return bot
 
+    async def get_bot(self, bot_id: UUID) -> BotSchema | None:
+        return await self.session.get(entity=BotSchema, ident=bot_id)
+
+    async def get_bot_else_throw(self, bot_id: UUID) -> BotSchema:
+        bot = await self.get_bot(bot_id=bot_id)
+        if not bot:
+            raise Exception(f"bot {bot_id} not found")
+        return bot
+
     async def create_knowledge(
         self, knowledge_create: KnowledgeCreate
     ) -> KnowledgeSchema:
@@ -185,6 +195,15 @@ class Database:
             self.session.add(chat)
             await self.session.commit()
         await self.session.refresh(chat)
+        return chat
+
+    async def get_chat(self, chat_id: UUID) -> ChatSchema | None:
+        return await self.session.get(entity=ChatSchema, ident=chat_id)
+
+    async def get_chat_else_throw(self, chat_id: UUID) -> ChatSchema:
+        chat = await self.get_chat(chat_id=chat_id)
+        if not chat:
+            raise Exception(f"chat {chat_id} not found")
         return chat
 
     #
