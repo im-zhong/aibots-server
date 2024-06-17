@@ -32,7 +32,7 @@ from app.storage.schema import (
 # 其实也很难说清
 
 
-client = TestClient(app)
+# client = TestClient(app)
 
 
 def default_character_avatar_url() -> str:
@@ -157,3 +157,31 @@ db_util = DBUtil()
 #     assert response.status_code == 200
 #     token = model.Token(**response.json())
 #     return token
+
+
+class MyTestClient:
+    # 为了方便测试，我们应该直接将api的返回结果序列化成pydantic model
+    # 以及，发出任务错误时，直接抛出异常
+    def __init__(self) -> None:
+        self.client = TestClient(app=app)
+
+    def create_chat(self, chat_create: ChatCreate) -> str:
+        response = self.client.post(
+            url="/api/chat/create",
+            json=chat_create.model_dump(),
+        )
+        assert response.status_code == 200, f"create chat failed: {response.text}"
+        return response.json()
+
+    # 我们还要写一个context manager 来模拟websocket chat
+
+
+class MyChatClient:
+    def __init__(self) -> None:
+        self.client = MyTestClient()
+
+    def create_chat(self, chat_create: ChatCreate) -> ChatSchema:
+        return self.client.create_chat(chat_create=chat_create)
+
+
+my_client = MyTestClient()

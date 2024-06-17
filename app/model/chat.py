@@ -15,8 +15,8 @@ class ChatMessage(BaseModel):
 
 
 class ChatCreate(BaseModel):
-    user_id: UUID
-    bot_id: UUID
+    user_id: str
+    bot_id: str
 
 
 class MessageSender(str, Enum):
