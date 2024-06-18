@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 from typing import Optional
 from uuid import UUID
 
+import redis.asyncio
 from fastapi import Request
 from fastapi_users import BaseUserManager, UUIDIDMixin
 
@@ -10,6 +11,8 @@ from app.common import conf
 from app.storage.schema import UserSchema
 
 SECRET = "SECRET"
+
+myredis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
 
 
 def send_email(subject: str, message: str, to_email: str):
@@ -40,7 +43,15 @@ class UserManager(UUIDIDMixin, BaseUserManager[UserSchema, UUID]):
     async def on_after_forgot_password(
         self, user: UserSchema, token: str, request: Optional[Request] = None
     ):
+        send_email(
+            subject="确认您的注册账号",
+            message=f"请点击以下链接以重置您的密码: http://localhost:3000/auth/reset-password/{token}",
+            to_email=user.email,
+        )
         print(f"User {user.id} has forgot their password. Reset token: {token}")
+        await myredis.set(
+            name="forgot-password" + str(user.email), value=token, ex=3600
+        )
 
     async def on_after_request_verify(
         self, user: UserSchema, token: str, request: Optional[Request] = None
@@ -56,3 +67,4 @@ class UserManager(UUIDIDMixin, BaseUserManager[UserSchema, UUID]):
         # TODO:
         # 我们这里需要把token保存起来，保存到redis里面吧
         # 方便后续进行测试
+        await myredis.set(name="my" + str(user.email), value=token, ex=3600)

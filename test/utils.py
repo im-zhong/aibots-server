@@ -5,8 +5,10 @@
 import random
 import uuid
 
+import redis.asyncio
 from fastapi.testclient import TestClient
 
+from app.common.conf import conf
 from app.main import app
 
 # 但是你要真这样引用起来还是挺麻烦的
@@ -23,6 +25,8 @@ from app.storage.schema import (
     MessageSchema,
     UserSchema,
 )
+
+myredis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
 
 # model定义为什么要单独分一个模块呢？
 # 为什么这些定义不能和直接使用它的地方紧密的结合起来呢？
@@ -101,8 +105,8 @@ class DBUtil:
         async with async_session_maker() as session:
             return await Database(session=session).create_chat(
                 chat_create=ChatCreate(
-                    user_id=user.id,
-                    bot_id=bot.id,
+                    user_id=str(user.id),
+                    bot_id=str(bot.id),
                 )
             )
 
@@ -164,6 +168,7 @@ class MyTestClient:
     # 以及，发出任务错误时，直接抛出异常
     def __init__(self) -> None:
         self.client = TestClient(app=app)
+        # self.cookie: dict | None = None
 
     def create_chat(self, chat_create: ChatCreate) -> str:
         response = self.client.post(
@@ -176,12 +181,36 @@ class MyTestClient:
     # 我们还要写一个context manager 来模拟websocket chat
 
     # https://fastapi-users.github.io/fastapi-users/latest/usage/routes/
-    def login(self, username: str, password: str) -> str:
+    def login(self, username: str, password: str):
         response = self.client.post(
             url="/api/auth/login",
             data={"username": username, "password": password},
         )
-        assert response.status_code == 200, f"login failed: {response.text}"
+        # https://fastapi-users.github.io/fastapi-users/latest/configuration/authentication/transports/cookie/
+        assert response.status_code == 204, f"login failed: {response.text}"
+        # return response
+        # we need to get the cookie in the header
+        cookie = response.headers["set-cookie"]
+        cookie_dict = {}
+        for cookie in cookie.split(";"):
+            if "=" in cookie:
+                key, value = cookie.split("=", 1)
+                cookie_dict[key.strip()] = value.strip()
+
+        self.cookie = cookie_dict
+        return cookie_dict
+
+    def logout(self, cookie: dict):
+        # if self.cookie is None:
+        #     return
+        key = "fastapiusersauth"
+        value = cookie[key]
+        response = self.client.post(
+            url="/api/auth/logout",
+            headers={"Cookie": f"{key}={value}"},
+        )
+        assert response.status_code == 204, f"logout failed: {response.text}"
+        return response
 
     def register(self, user_create: UserCreate) -> UserOut:
         response = self.client.post(
@@ -191,7 +220,7 @@ class MyTestClient:
         assert response.status_code == 201, f"register failed: {response}"
         return UserOut(**response.json())
 
-    def request_verify_token(self, email: str):
+    async def request_verify_token(self, email: str) -> str | None:
         response = self.client.post(
             url="/api/auth/request-verify-token",
             json={"email": email},
@@ -200,6 +229,31 @@ class MyTestClient:
         # 正常来说，我们是拿不到这个token的，因为真正的token会发邮件给用户
         # 但是我们这里是测试，所以我们可以从数据库中直接读取token 返回
         # 这样就很方便测试了
+        token = await myredis.get(name="my" + email)
+        return token
+
+    async def verify(self, token: str):
+        response = self.client.post(
+            url="/api/auth/verify",
+            json={"token": token},
+        )
+        assert response.status_code == 200
+
+    async def forgot_password(self, email: str) -> str:
+        response = self.client.post(
+            url="/api/auth/forgot-password",
+            json={"email": email},
+        )
+        assert response.status_code == 202, f"forget password failed: {response}"
+        token = await myredis.get(name="forgot-password" + email)
+        return token
+
+    async def reset_password(self, token: str, password: str):
+        response = self.client.post(
+            url="/api/auth/reset-password",
+            json={"token": token, "password": password},
+        )
+        assert response.status_code == 200, f"reset password failed: {response}"
 
 
 my_client = MyTestClient()
