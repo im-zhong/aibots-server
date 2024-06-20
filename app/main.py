@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.common.conf import conf
-from app.router.auth import auth
+from app.router.auth import auth, user
 from app.router.bot import bot
 from app.router.chat import chat
 from app.router.knowledge import knowledge
@@ -36,6 +36,7 @@ app.add_middleware(
 
 
 app.include_router(router=auth)
+app.include_router(router=user)
 app.include_router(router=chat)
 app.include_router(router=knowledge)
 app.include_router(router=bot)

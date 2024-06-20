@@ -15,6 +15,7 @@ from fastapi_users.authentication import (
 from fastapi_users.db import SQLAlchemyUserDatabase
 
 from app.common import conf
+from app.model import UserUpdate
 from app.model.user import UserCreate, UserOut
 from app.router.dependency import get_user_manager
 from app.storage.schema import UserSchema
@@ -60,3 +61,8 @@ auth.include_router(
 auth.include_router(fastapi_users.get_register_router(UserOut, UserCreate))
 auth.include_router(fastapi_users.get_reset_password_router())
 auth.include_router(fastapi_users.get_verify_router(UserOut))
+
+user = APIRouter(prefix="/api/user", tags=["user"])
+user.include_router(
+    fastapi_users.get_users_router(UserOut, UserUpdate, requires_verification=True),
+)
