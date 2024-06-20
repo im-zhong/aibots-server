@@ -116,6 +116,16 @@ class LoaderFactory:
 # 那么这个client其实也只需要一个就ok了
 class VectorStore:
     def __init__(self):
+
+        # let langchain create this collection for us
+        Qdrant.from_documents(
+            documents=[Document(page_content="hello")],
+            embedding=embedding,
+            url=conf.qdrant_host,
+            prefer_grpc=conf.qdrant_prefer_grpc,
+            collection_name=conf.qdrant_collection_name,
+        )
+
         # https://qdrant.tech/documentation/frameworks/langchain/
         # https://python-client.qdrant.tech/qdrant_client.qdrant_client
         self.client = QdrantClient(url=conf.qdrant_url)
@@ -126,6 +136,7 @@ class VectorStore:
             # collection_name无法在一开始指定好像
             # collection_name=conf.qdrant_collection_name,
         )
+
         self.qdrant = Qdrant(
             client=self.client,
             async_client=self.async_client,
@@ -137,15 +148,6 @@ class VectorStore:
             collection_name=conf.qdrant_collection_name
         )
         print(collection_info)
-
-        # let langchain create this collection for us
-        Qdrant.from_documents(
-            documents=[Document(page_content="hello")],
-            embedding=embedding,
-            url=conf.qdrant_host,
-            prefer_grpc=conf.qdrant_prefer_grpc,
-            collection_name=conf.qdrant_collection_name,
-        )
 
         # if the collection is not exist, we should create it first
         # let's check how langchain create it
