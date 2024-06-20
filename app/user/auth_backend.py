@@ -13,14 +13,18 @@ from fastapi_users.authentication import (
     RedisStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
-
+from fastapi_users.authentication import BearerTransport
 from app.common import conf
 from app.model import UserUpdate
 from app.model.user import UserCreate, UserOut
 from app.storage.schema import UserSchema
 
 cookie_transport = CookieTransport(cookie_max_age=3600)
+bearer_transport = BearerTransport(tokenUrl="api/auth/login")
 myredis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
+
+# https://fastapi-users.github.io/fastapi-users/latest/configuration/authentication/#bearer
+# Use it if you want to implement a mobile application or a pure REST API.
 
 
 def get_redis_strategy() -> RedisStrategy:
@@ -40,7 +44,8 @@ def get_redis_strategy() -> RedisStrategy:
 # 并且，一旦用户修改了密码，即使密码和之前一样，数据库中的（哈希之后的密码+盐）也会不一样，所以这个生成的jwt只能使用一次
 auth_backend = AuthenticationBackend(
     name="cookie_redis",
-    transport=cookie_transport,  # On logout, This method will remove the authentication cookie
+    # transport=cookie_transport,  # On logout, This method will remove the authentication cookie
+    transport=bearer_transport,
     get_strategy=get_redis_strategy,  # On logout, this strategy will delete the token from the Redis store.
 )
 
