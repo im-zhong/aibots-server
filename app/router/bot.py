@@ -7,7 +7,7 @@ from app.model import BotCreate, BotOut
 from app.router.dependency import get_db
 from app.storage.database import Database
 
-bot = APIRouter(prefix="/api/bot", tags=["bot"])
+bot = APIRouter(prefix="/api/agent", tags=["bot"])
 
 
 @bot.post("/create")

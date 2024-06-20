@@ -5,10 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.common.conf import conf
-from app.router.auth import auth, user
-from app.router.bot import bot
-from app.router.chat import chat
-from app.router.knowledge import knowledge
+from app.router import auth, bot, chat, knowledge, user
 from app.storage.database import init_db
 
 
