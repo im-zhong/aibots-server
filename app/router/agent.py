@@ -61,4 +61,4 @@ async def list_agents(
     db: Database = Depends(dependency=get_db),
     user: UserSchema = Depends(dependency=get_current_user),
 ) -> list[AgentOut]:
-    return await db.get_agents(limit=limit)  # type: ignore
+    return await db.get_agents(user_id=user.id, limit=limit)  # type: ignore

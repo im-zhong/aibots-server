@@ -13,7 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.common.conf import conf
-from app.model import AgentCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
+from app.model import (
+    AgentCreate,
+    ChatCreate,
+    KnowledgeCreate,
+    KnowledgePointCreate,
+    MessageCreate,
+)
 
 from .schema import (
     AgentKnowledgeSchema,
@@ -256,12 +262,16 @@ class Database:
             raise Exception(f"chat {chat_id} not found")
         return chat
 
-    async def get_agents(self, limit: int) -> list[AgentSchema]:
-        result = await self.session.execute(select(AgentSchema).limit(limit=limit))
+    async def get_agents(self, user_id: UUID, limit: int) -> list[AgentSchema]:
+        result = await self.session.execute(
+            select(AgentSchema).filter_by(user_id=user_id).limit(limit=limit)
+        )
         return [agent for agent in result.scalars().all()]
 
-    async def get_chats(self, limit: int) -> list[ChatSchema]:
-        result = await self.session.execute(select(ChatSchema).limit(limit=limit))
+    async def get_chats(self, user_id: UUID, limit: int) -> list[ChatSchema]:
+        result = await self.session.execute(
+            select(ChatSchema).filter_by(user_id=user_id).limit(limit=limit)
+        )
         return [agent for agent in result.scalars().all()]
 
     #
@@ -279,8 +289,9 @@ class Database:
     #     return db_chat
     #
     # # content
-    # def create_message(self, create: MessageCreate) -> MessageSchema:
-    #     message = MessageSchema(**create.model_dump())
-    #     self._session.add(message)
-    #     self._session.commit()
-    #     return message
+    async def create_message(self, create: MessageCreate) -> MessageSchema:
+        message = MessageSchema(**create.model_dump())
+        self.session.add(message)
+        await self.session.commit()
+        await self.session.refresh(message)
+        return message

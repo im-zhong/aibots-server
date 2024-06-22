@@ -10,7 +10,7 @@ from langchain.tools import BaseTool
 from app.aibot import AIBotFactory
 from app.aibot.agent import Agent
 from app.aibot.chatbot import ChatBot
-from app.model import ChatCreate, ChatMessage, ChatOut
+from app.model import ChatCreate, ChatMessage, ChatOut, MessageCreate, MessageSender
 from app.router.dependency import (
     get_current_user,
     get_db,
@@ -65,7 +65,26 @@ async def list_chats(
     db: Database = Depends(get_db),
     user: UserSchema = Depends(dependency=get_current_user),
 ) -> list[ChatOut]:
-    return await db.get_chats(limit=limit)  # type: ignore
+    return await db.get_chats(user_id=user.id, limit=limit)  # type: ignore
+
+
+@chat.get(path="/api/chat/{id}")
+async def get_chat(
+    id: UUID,
+    db: Database = Depends(dependency=get_db),
+    user: UserSchema = Depends(dependency=get_current_user),
+) -> ChatOut:
+    chat: ChatSchema = await db.get_chat_else_throw(chat_id=id)
+    if user.id != chat.user_id:
+        raise ValueError("You are not the owner of this chat")
+
+    return ChatOut(
+        id=chat.id,
+        agent_id=chat.agent_id,
+        user_id=chat.user_id,
+        create_at=chat.create_at,
+        chat_history=await chat.awaitable_attrs.messages,
+    )
 
 
 # # https://github.com/fastapi-users/fastapi-users/issues/295
@@ -160,20 +179,20 @@ async def websocket_endpoint(
                 content += ai_output.content
 
             print(f"bot: {content}")
-            # db.create_content(
-            #     content_create=model.MessageCreate(
-            #         chat_id=chat.chat_id,
-            #         content=user_input.content,
-            #         sender=model.MessageSender.HUMAN,
-            #     )
-            # )
-            # db.create_content(
-            #     content_create=model.MessageCreate(
-            #         chat_id=chat.chat_id,
-            #         content=content,
-            #         sender=model.MessageSender.AI,
-            #     )
-            # )
+            await db.create_message(
+                create=MessageCreate(
+                    chat_id=chat.id,
+                    content=user_input.content,
+                    sender=MessageSender.HUMAN,
+                )
+            )
+            await db.create_message(
+                create=MessageCreate(
+                    chat_id=chat.id,
+                    content=content,
+                    sender=MessageSender.AI,
+                )
+            )
 
     except Exception as e:
         print(e)
