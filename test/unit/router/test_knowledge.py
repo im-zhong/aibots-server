@@ -91,3 +91,16 @@ async def test_create_knowledge_point_by_upload_url():
     assert response.status_code == 200
     knowledge_id: str = response.json()
     print(knowledge_id)
+
+
+async def test_upload_url():
+    response = client.post(
+        url="/api/knowledge/upload-url",
+        json={
+            "knowledge_id": "fdf9805c-9e5b-41ae-a347-6980cc553dbc",
+            "url": "http://www.baidu.com",
+        },
+    )
+    assert response.status_code == 200
+    knowledge_id: str = response.json()
+    print(knowledge_id)

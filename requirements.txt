@@ -19,3 +19,4 @@ qdrant-client
 langchain-community
 langchain-openai
 pytest-asyncio
+bs4

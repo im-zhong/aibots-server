@@ -189,6 +189,9 @@ async def knowledge_upload_webpage(
     # )
     await create_knowledge_indexing(knowledge_point=knowledge_point)
     # 在数据库中添加相关词条
+    # 或许最好返回一个dict
+    # {id: string}
+    # 这个样子
     return str(knowledge_point.id)
 
 

@@ -41,7 +41,7 @@ class LoaderFactory:
         # 后缀太多了 没法一一列出来
         if self.file_or_url.startswith("http"):
             return WebBaseLoader(web_path=self.file_or_url)
-        elif self.file_or_url.endswith(("txt", "py")):
+        elif self.file_or_url.endswith(("txt", "py", "log")):
             return TextLoader(file_path=self.file_or_url)
         elif self.file_or_url.endswith("pdf"):
             return PDFMinerLoader(file_path=self.file_or_url)

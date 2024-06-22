@@ -28,7 +28,7 @@ async def create_agent(
 async def add_knowledges(
     request: AddKnowledges,
     db: Database = Depends(get_db),
-):
+) -> None:
     await db.add_knowledges_to_agent(
         agent_id=request.agent_id, knowledge_ids=request.knowledge_ids
     )
