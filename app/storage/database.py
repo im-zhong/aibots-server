@@ -256,6 +256,10 @@ class Database:
             raise Exception(f"chat {chat_id} not found")
         return chat
 
+    async def get_agents(self, limit: int) -> list[AgentSchema]:
+        result = await self.session.execute(select(AgentSchema).limit(limit=limit))
+        return [agent for agent in result.scalars().all()]
+
     #
     # def delete_chat(self, chat_id: int) -> None:
     #     db_chat = self._session.execute(

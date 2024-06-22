@@ -51,3 +51,14 @@ async def add_knowledges(
     await db.add_knowledges_to_agent(
         agent_id=request.agent_id, knowledge_ids=request.knowledge_ids
     )
+
+
+# I need to add a new router to search and list agents
+# first, write a very simple api to list all agents, only for tests
+@agent.get(path="/list")
+async def list_agents(
+    limit: int,
+    db: Database = Depends(dependency=get_db),
+    user: UserSchema = Depends(dependency=get_current_user),
+) -> list[AgentOut]:
+    return await db.get_agents(limit=limit)  # type: ignore
