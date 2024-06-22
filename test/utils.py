@@ -16,10 +16,11 @@ from app.main import app
 # from app.model.bot import BotCreate
 # # from app.model.chat import ChatCreate,
 # from app.model.user import UserCreate
-from app.model import BotCreate, ChatCreate, KnowledgeCreate, UserCreate, UserOut
+from app.model import AgentCreate, ChatCreate, KnowledgeCreate, UserCreate, UserOut
 from app.storage.database import AsyncSession, Database, async_session_maker
 from app.storage.schema import (
-    BotSchema,
+    AgentKnowledgeSchema,
+    AgentSchema,
     ChatSchema,
     KnowledgeSchema,
     MessageSchema,
@@ -56,8 +57,8 @@ def random_name() -> str:
     return str(uuid.uuid4())
 
 
-def random_bot(user_id: uuid.UUID) -> BotCreate:
-    return BotCreate(
+def random_bot(user_id: uuid.UUID) -> AgentCreate:
+    return AgentCreate(
         user_id=user_id,
         name="test",
         description="random character description",
@@ -86,17 +87,17 @@ class DBUtil:
             )
 
     @staticmethod
-    async def create_random_bot(user: UserSchema | None = None) -> BotSchema:
+    async def create_random_bot(user: UserSchema | None = None) -> AgentSchema:
         if user is None:
             user = await DBUtil.create_random_user()
         async with async_session_maker() as session:
-            return await Database(session=session).create_bot(
-                bot_create=random_bot(user_id=user.id)
+            return await Database(session=session).create_agent(
+                agent_create=random_bot(user_id=user.id)
             )
 
     @staticmethod
     async def create_random_chat(
-        user: UserSchema | None = None, bot: BotSchema | None = None
+        user: UserSchema | None = None, bot: AgentSchema | None = None
     ) -> ChatSchema:
         if user is None:
             user = await DBUtil.create_random_user()
@@ -106,13 +107,13 @@ class DBUtil:
             return await Database(session=session).create_chat(
                 chat_create=ChatCreate(
                     user_id=str(user.id),
-                    bot_id=str(bot.id),
+                    agent_id=str(bot.id),
                 )
             )
 
     @staticmethod
     async def create_temp_knowledge(
-        user: UserSchema | None = None, bot: BotSchema | None = None
+        user: UserSchema | None = None, bot: AgentSchema | None = None
     ) -> KnowledgeSchema:
         if user is None:
             user = await DBUtil.create_random_user()
@@ -121,9 +122,28 @@ class DBUtil:
         async with async_session_maker() as session:
             return await Database(session=session).create_knowledge(
                 knowledge_create=KnowledgeCreate(
-                    bot_id=bot.id,
+                    # agent_id=bot.id,
                     topic="temp",
                 )
+            )
+
+    @staticmethod
+    async def add_knowledge_to_agent(
+        agent: AgentSchema, knowledge: KnowledgeSchema | None
+    ) -> AgentKnowledgeSchema:
+        if knowledge is None:
+            knowledge = await DBUtil.create_temp_knowledge()
+        async with async_session_maker() as session:
+            return await Database(session=session).add_knowledge_to_agent(
+                agent_id=agent.id,
+                knowledge_id=knowledge.id,
+            )
+
+    @staticmethod
+    async def get_knowledges_of_agent(agent: AgentSchema) -> list[KnowledgeSchema]:
+        async with async_session_maker() as session:
+            return await Database(session=session).get_knowledges_of_agent(
+                agent_id=agent.id,
             )
 
 

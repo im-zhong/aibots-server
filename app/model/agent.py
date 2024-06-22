@@ -23,7 +23,7 @@ class BotCategory(str, Enum):
     PAINTER = "painter"
 
 
-class BotCreate(BaseModel):
+class AgentCreate(BaseModel):
     name: str = Field(description="机器人名称")
     user_id: uuid.UUID = Field(description="用户id")
     description: str = Field(description="机器人信息")
@@ -40,7 +40,7 @@ class BotCreate(BaseModel):
     # 前端需要传的是文件id
     # knowledge_id: str | None = Field(default=None, description="知识库ID")
     # memory_id: str | None = Field(default=None, description="记忆库ID")
-    knowledges: list[str] = Field(default=[], description="文件ID")
+    # knowledges: list[str] = Field(default=[], description="文件ID")
     prompt: str = Field(default="", description="提示")
     web_search: bool = Field(default=False, description="是否开启网络搜索")
     painting: bool = Field(default=False, description="是否开启绘画")
@@ -67,7 +67,7 @@ class BotCreate(BaseModel):
 # #     avatar_url: str | None = Field(default=None, description="头像url")
 #
 #
-class BotOut(BaseModel):
+class AgentOut(BaseModel):
     id: uuid.UUID = Field(description="机器人id")
     name: str = Field(description="机器人名称")
     description: str = Field(description="机器人信息")

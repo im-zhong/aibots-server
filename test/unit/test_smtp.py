@@ -1,4 +1,4 @@
-from app.router.user_manager import send_email
+from app.user.user_manager import send_email
 
 
 def test_semd_email():

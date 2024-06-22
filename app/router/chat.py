@@ -15,7 +15,7 @@ from app.router.dependency import get_db
 
 # from app.dependency import get_db, get_token_data, get_user
 from app.storage.database import Database
-from app.storage.schema import BotSchema, ChatSchema, MessageSchema
+from app.storage.schema import AgentSchema, ChatSchema, MessageSchema
 from app.tool import RetrieverToolFactory, dalle_tool, search_tool
 
 chat = APIRouter()
@@ -33,7 +33,7 @@ async def create_chat(
     return str(chat.id)
 
 
-async def create_tools_from_bot(bot: BotSchema) -> list[BaseTool]:
+async def create_tools_from_bot(bot: AgentSchema) -> list[BaseTool]:
     # 2. second, according to the bot, instance an agent
     tools = []
     if bot.web_search:
@@ -75,7 +75,7 @@ async def websocket_endpoint(
 
         # instance an agent from this chat
         # 1. first, get the bot from this chat
-        bot = await db.get_bot_else_throw(bot_id=chat.bot_id)
+        bot = await db.get_agent_else_throw(agent_id=chat.agent_id)
 
         # character = db.get_character(cid=cid)
         # chat_history: list[MessageSchema] = []

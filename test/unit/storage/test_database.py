@@ -5,12 +5,13 @@
 import uuid
 from test.utils import db_util, random_bot, random_character_category
 
-from app.model import BotCreate, ChatCreate, UserCreate, UserUpdate
+from app.model import AgentCreate, ChatCreate, UserCreate, UserUpdate
 from app.storage.database import init_db
 from app.storage.schema import (
     BaseSchema,
-    BotSchema,
+    AgentSchema,
     ChatSchema,
+    KnowledgeSchema,
     MessageSchema,
     UserSchema,
 )
@@ -88,3 +89,31 @@ async def test_chat():
     bot = await db_util.create_random_bot(user=user)
     chat = await db_util.create_random_chat(user=user, bot=bot)
     print(chat)
+
+
+async def test_knowledge():
+    agent1 = await db_util.create_random_bot()
+    agent2 = await db_util.create_random_bot()
+    agent3 = await db_util.create_random_bot()
+
+    knowledge1 = await db_util.create_temp_knowledge()
+    knowledge2 = await db_util.create_temp_knowledge()
+    knowledge3 = await db_util.create_temp_knowledge()
+
+    await db_util.add_knowledge_to_agent(agent=agent1, knowledge=knowledge1)
+    await db_util.add_knowledge_to_agent(agent=agent1, knowledge=knowledge2)
+    await db_util.add_knowledge_to_agent(agent=agent2, knowledge=knowledge3)
+
+    knowledges = await db_util.get_knowledges_of_agent(agent=agent1)
+    assert len(knowledges) == 2
+    assert set([knowledge.id for knowledge in knowledges]) == {
+        knowledge1.id,
+        knowledge2.id,
+    }
+
+    knowledges = await db_util.get_knowledges_of_agent(agent=agent2)
+    assert len(knowledges) == 1
+    assert knowledges[0].id == knowledge3.id
+
+    knowledges = await db_util.get_knowledges_of_agent(agent=agent3)
+    assert len(knowledges) == 0

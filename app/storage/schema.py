@@ -23,17 +23,19 @@ class UserSchema(SQLAlchemyBaseUserTableUUID, BaseSchema):
     __tablename__ = "users"
 
     name: Mapped[str] = mapped_column()
+    avatar: Mapped[str] = mapped_column(default="")
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
     is_deleted: Mapped[bool] = mapped_column(default=False)
 
-    bots: Mapped[list["BotSchema"]] = relationship(back_populates="associated_user")
+    agents: Mapped[list["AgentSchema"]] = relationship(back_populates="associated_user")
     chats: Mapped[list["ChatSchema"]] = relationship(back_populates="associated_user")
 
 
-class BotSchema(BaseSchema):
-    __tablename__ = "bots"
+class AgentSchema(BaseSchema):
+    __tablename__ = "agents"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    avatar: Mapped[str] = mapped_column(default="")
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(index=True)
     description: Mapped[str] = mapped_column()
@@ -48,9 +50,13 @@ class BotSchema(BaseSchema):
     painting: Mapped[bool] = mapped_column(default=False)
     multi_model: Mapped[bool] = mapped_column(default=False)
 
-    associated_user: Mapped[UserSchema] = relationship(back_populates="bots")
-    knowledges: Mapped[list["KnowledgeSchema"]] = relationship(
-        back_populates="associated_bot"
+    associated_user: Mapped[UserSchema] = relationship(back_populates="agents")
+    # knowledges: Mapped[list["KnowledgeSchema"]] = relationship(
+    #     back_populates="associated_bot"
+    # )
+
+    agent_knowledges: Mapped[list["AgentKnowledgeSchema"]] = relationship(
+        back_populates="associated_agent"
     )
 
 
@@ -59,7 +65,7 @@ class ChatSchema(BaseSchema):
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
-    bot_id: Mapped[UUID] = mapped_column(ForeignKey("bots.id"))
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id"))
     create_at: Mapped[datetime] = mapped_column(default=datetime.now())
     is_deleted: Mapped[bool] = mapped_column(default=False)
 
@@ -87,10 +93,13 @@ class KnowledgeSchema(BaseSchema):
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     topic: Mapped[str] = mapped_column()
-    bot_id: Mapped[UUID] = mapped_column(ForeignKey("bots.id"))
+    # bot_id: Mapped[UUID] = mapped_column(ForeignKey("bots.id"))
 
-    associated_bot: Mapped[BotSchema] = relationship(back_populates="knowledges")
+    # associated_bot: Mapped[BotSchema] = relationship(back_populates="knowledges")
     points: Mapped[list["KnowledgePointSchema"]] = relationship(
+        back_populates="associated_knowledge"
+    )
+    agent_knowledges: Mapped[list["AgentKnowledgeSchema"]] = relationship(
         back_populates="associated_knowledge"
     )
 
@@ -109,3 +118,29 @@ class KnowledgePointSchema(BaseSchema):
 
     def is_url(self) -> bool:
         return "http" in self.path_or_url
+
+
+# 果然是不行的
+# 但是其实也简单
+# 我们真正需要做的就是提供两个函数
+# 一个是向某个agent添加某个知识
+# 另一个是获取某个agent的所有知识
+# 写两个函数就ok了呀
+# 其实就是做一个join罢了
+# 还是写一下吧 扩充一下技术点
+class AgentKnowledgeSchema(BaseSchema):
+    __tablename__ = "agent_knowledges"
+
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id"))
+    knowledge_id: Mapped[UUID] = mapped_column(ForeignKey("knowledges.id"))
+
+    # relatioinship是双向的
+    # 也就是说，我们也需要在agent和knowledge表中添加这些字段
+    # 好像我只需要写python代码就可以变成join啊 这个太简单了
+    associated_agent: Mapped[AgentSchema] = relationship(
+        back_populates="agent_knowledges"
+    )
+    associated_knowledge: Mapped[KnowledgeSchema] = relationship(
+        back_populates="agent_knowledges"
+    )

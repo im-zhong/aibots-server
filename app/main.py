@@ -30,7 +30,7 @@ origins = [
 # 而且怎么那么多安全隐患呢？
 # 感觉不如jwt呀
 # 而且我们后续使用chat功能的时候，也需要验证啊
-# 但是我们又没有办法使用cookie 因为websocket不支持http header
+# 但是我们又没有办法使用cookie 因为websocket不支持http header       #
 # 感觉真不如jwt。。。
 # SameSite=Strict will prevent the cookie from being sent on any cross-site requests.
 # SameSite=Lax allows the cookie to be sent with top-level navigations that are considered "safe" (GET requests), but it will not be sent with API requests made using methods such as POST, PUT, DELETE, etc., from a different site.

@@ -88,6 +88,14 @@ async def create_knowledge(
     return str(knowledge.id)
 
 
+# 咱们可以采取一种折衷的方法
+# 就是先把知识都添加到一个临时的agent下面
+# 类似于linux系统里面的pid=1
+# 这样所有的底层数据结构都不需要改
+# 否则我们在数据表中把knowledge和agent分开，就用不了sqlalchemy的relationship了，还是挺可惜的
+# 也不一定 先试试sql可不可以把
+
+
 # TODO: 改一下名字，上传文件和上传webpage的接口可以分开
 # 毕竟后端处理起来也不一样，前端处理也不一样
 @knowledge.post(path="/upload-file")

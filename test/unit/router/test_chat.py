@@ -25,7 +25,7 @@ async def test_chat():
     chat_id = my_client.create_chat(
         chat_create=ChatCreate(
             user_id=str(user.id),
-            bot_id=str(bot.id),
+            agent_id=str(bot.id),
         )
     )
 

@@ -14,7 +14,7 @@ class KnowledgePointCategory(str, Enum):
 
 
 class KnowledgeCreate(BaseModel):
-    bot_id: UUID = Field(description="机器人id")
+    # agent_id: UUID = Field(description="机器人id")
     topic: str = Field(description="知识库主题")
 
 

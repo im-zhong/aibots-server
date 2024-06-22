@@ -13,16 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.common.conf import conf
-from app.model import BotCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
+from app.model import AgentCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
 
 from .schema import (
     BaseSchema,
-    BotSchema,
+    AgentSchema,
     ChatSchema,
     KnowledgePointSchema,
     KnowledgeSchema,
     MessageSchema,
     UserSchema,
+    AgentKnowledgeSchema,
 )
 
 engine = create_async_engine(
@@ -36,7 +37,7 @@ async_session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 async def init_db():
     async with engine.begin() as conn:
-        # await conn.run_sync(BaseSchema.metadata.drop_all)
+        await conn.run_sync(BaseSchema.metadata.drop_all)
         await conn.run_sync(BaseSchema.metadata.create_all)
 
 
@@ -116,26 +117,26 @@ class Database:
     #     )
     #     return [u for u in users]
     #
-    async def create_bot(self, bot_create: BotCreate) -> BotSchema:
-        bot_dict = bot_create.model_dump()
+    async def create_agent(self, agent_create: AgentCreate) -> AgentSchema:
+        agent_dict = agent_create.model_dump()
         # bot_dict["knowledge_id"] = str(uuid.uuid4())
         # bot_dict["category"] = "chat_bot"
         # bot_dict["user_id"] = "f3e60362-40cc-463f-8f69-b0c8cd3a0b9d"
         # bot_dict.pop("knowledges")
-        bot = BotSchema(**bot_dict)
+        agent = AgentSchema(**agent_dict)
         async with self.session.begin():
-            self.session.add(bot)
+            self.session.add(agent)
             await self.session.commit()
-        await self.session.refresh(bot)
-        return bot
+        await self.session.refresh(agent)
+        return agent
 
-    async def get_bot(self, bot_id: UUID) -> BotSchema | None:
-        return await self.session.get(entity=BotSchema, ident=bot_id)
+    async def get_agent(self, agent_id: UUID) -> AgentSchema | None:
+        return await self.session.get(entity=AgentSchema, ident=agent_id)
 
-    async def get_bot_else_throw(self, bot_id: UUID) -> BotSchema:
-        bot = await self.get_bot(bot_id=bot_id)
+    async def get_agent_else_throw(self, agent_id: UUID) -> AgentSchema:
+        bot = await self.get_agent(agent_id=agent_id)
         if not bot:
-            raise Exception(f"bot {bot_id} not found")
+            raise ValueError(f"bot {agent_id} not found")
         return bot
 
     async def create_knowledge(
@@ -148,6 +149,15 @@ class Database:
         await self.session.refresh(knowledge)
         return knowledge
 
+    async def get_knowledge(self, knowledge_id: UUID) -> KnowledgeSchema | None:
+        return await self.session.get(entity=KnowledgeSchema, ident=knowledge_id)
+
+    async def get_knowledge_else_throw(self, knowledge_id: UUID) -> KnowledgeSchema:
+        knowledge = await self.get_knowledge(knowledge_id=knowledge_id)
+        if not knowledge:
+            raise ValueError(f"knowledge {knowledge_id} not found")
+        return knowledge
+
     async def create_knowledge_point(
         self, knowledge_point_create: KnowledgePointCreate
     ) -> KnowledgePointSchema:
@@ -157,6 +167,32 @@ class Database:
             await self.session.commit()
         await self.session.refresh(knowledge_point)
         return knowledge_point
+
+    async def add_knowledge_to_agent(
+        self, agent_id: UUID, knowledge_id: UUID
+    ) -> AgentKnowledgeSchema:
+        async with self.session.begin():
+            agent_knowledge = AgentKnowledgeSchema(
+                agent_id=agent_id, knowledge_id=knowledge_id
+            )
+            self.session.add(agent_knowledge)
+            await self.session.commit()
+        await self.session.refresh(agent_knowledge)
+        return agent_knowledge
+
+    async def get_knowledges_of_agent(self, agent_id: UUID) -> list[KnowledgeSchema]:
+        async with self.session.begin():
+            # 难道是这样写不行吗
+            # 还是只能自己写一个join？
+            # 还真是，只能自己写join
+            # agent = await self.get_agent_else_throw(agent_id=agent_id)
+            # return [ak.associated_knowledge for ak in agent.agent_knowledges]
+            result = await self.session.execute(
+                statement=select(KnowledgeSchema)
+                .join(AgentKnowledgeSchema)
+                .filter(AgentKnowledgeSchema.agent_id == agent_id)
+            )
+            return [knowledge for knowledge in result.scalars().all()]
 
     #
     # # TODO:
