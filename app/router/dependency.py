@@ -42,3 +42,16 @@ async def get_current_user(
     user: UserSchema = Depends(fastapi_users.current_user(active=True, verified=True)),
 ):
     yield user
+
+
+# https://github.com/fastapi-users/fastapi-users/issues/295
+async def get_user_from_token(
+    token: str, user_manager=Depends(dependency=get_user_manager)
+):
+    print("try to auth user")
+    user: UserSchema | None = await auth_backend.get_strategy().read_token(  # type: ignore
+        token, user_manager
+    )
+    if not user or not user.is_active or not user.is_verified:
+        raise ValueError("Invalid user")
+    yield user

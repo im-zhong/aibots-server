@@ -11,14 +11,19 @@ from app.aibot import AIBotFactory
 from app.aibot.agent import Agent
 from app.aibot.chatbot import ChatBot
 from app.model import ChatCreate, ChatMessage
-from app.router.dependency import get_db
+from app.router.dependency import (
+    get_current_user,
+    get_db,
+    get_user_from_token,
+    get_user_manager,
+)
 
 # from app.dependency import get_db, get_token_data, get_user
 from app.storage.database import Database
-from app.storage.schema import AgentSchema, ChatSchema, MessageSchema
+from app.storage.schema import AgentSchema, ChatSchema, MessageSchema, UserSchema
 from app.tool import RetrieverToolFactory, dalle_tool, search_tool
 
-chat = APIRouter()
+chat = APIRouter(tags=["chat"])
 
 
 # https://devcenter.heroku.com/articles/websocket-security#wss
@@ -28,12 +33,13 @@ chat = APIRouter()
 async def create_chat(
     chat_create: ChatCreate,
     db: Database = Depends(get_db),
+    user: UserSchema = Depends(dependency=get_current_user),
 ) -> str:
     chat = await db.create_chat(chat_create=chat_create)
     return str(chat.id)
 
 
-async def create_tools_from_bot(bot: AgentSchema) -> list[BaseTool]:
+async def create_tools_from_bot(bot: AgentSchema, db: Database) -> list[BaseTool]:
     # 2. second, according to the bot, instance an agent
     tools = []
     if bot.web_search:
@@ -41,12 +47,28 @@ async def create_tools_from_bot(bot: AgentSchema) -> list[BaseTool]:
     if bot.painting:
         tools.append(dalle_tool)
     # 3. last, according to the knowledge, instance retrieval
-    for knowledge in await bot.awaitable_attrs.knowledges:
+    # at this point, we do not have knowledges ever
+    # so get the knowledges from database instead
+
+    # for knowledge in await bot.awaitable_attrs.knowledges:
+    for knowledge in await db.get_knowledges_of_agent(agent_id=bot.id):
         # every knowledge have an id
         # we should instance a retriever only from this knowledge id
         retrieval_tool = RetrieverToolFactory(knowledge=knowledge).new()
         tools.append(retrieval_tool)
     return tools
+
+
+# # https://github.com/fastapi-users/fastapi-users/issues/295
+# # ref to that
+# async def get_user_from_cookie(
+#     websocket: WebSocket, user_manager=Depends(dependency=get_user_manager)
+# ):
+#     cookie = websocket.cookies.get("fastapiusersauth")
+#     user = await cookie_auth_backend.get_strategy().read_token(cookie, user_manager)
+#     if not user or not user.is_active:
+#         raise WebSocketException("Invalid user")
+#     yield user
 
 
 # 不论如何，我们都可以先创建一个chat
@@ -58,24 +80,32 @@ async def create_tools_from_bot(bot: AgentSchema) -> list[BaseTool]:
 async def websocket_endpoint(
     # db: Annotated[DatabaseService, Depends(get_db)],
     websocket: WebSocket,
+    token: str,
     # cid: int,
     # token: str,
     # chat_id: int | None = None,
     chat_id: str,
     db: Database = Depends(get_db),
+    # user: UserSchema = Depends(dependency=get_current_user),
+    user: UserSchema = Depends(dependency=get_user_from_token),
 ):
     # token_data = await get_token_data(token=token)
     # user = get_user(token_data=token_data, db=db)
+
+    # how to authenticate the token and get user?
+    print(user.id, user.name)
 
     try:
         await websocket.accept()
 
         # 首先访问数据库
         chat: ChatSchema = await db.get_chat_else_throw(chat_id=UUID(chat_id))
+        print("chat_id", chat.id)
 
         # instance an agent from this chat
         # 1. first, get the bot from this chat
         bot = await db.get_agent_else_throw(agent_id=chat.agent_id)
+        print("agent_id", bot.id)
 
         # character = db.get_character(cid=cid)
         # chat_history: list[MessageSchema] = []
@@ -103,14 +133,15 @@ async def websocket_endpoint(
             prompt=bot.prompt,
             # https://docs.sqlalchemy.org/en/20/errors.html#error-xd2s
             # https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html#preventing-implicit-io-when-using-asyncsession
-            tools=await create_tools_from_bot(bot=bot),
+            tools=await create_tools_from_bot(bot=bot, db=db),
             messages=await chat.awaitable_attrs.messages,
         )
+        print("create aibot success!")
 
         # 图片使用base64编码保存可以极大的简化代码，太棒了
 
         while True:
-
+            print("start waiting for user input...")
             user_input = await websocket.receive_json()
             user_input = ChatMessage(**user_input)
             print(f"user: {user_input.content}")
@@ -136,7 +167,7 @@ async def websocket_endpoint(
             # )
 
     except Exception as e:
-        # print(e)
+        print(e)
         print("close websocket")
         # if websocket.closed
         await websocket.close()

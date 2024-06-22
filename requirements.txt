@@ -21,3 +21,4 @@ langchain-community
 langchain-openai
 pytest-asyncio
 bs4
+langchainhub
