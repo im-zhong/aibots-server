@@ -260,6 +260,10 @@ class Database:
         result = await self.session.execute(select(AgentSchema).limit(limit=limit))
         return [agent for agent in result.scalars().all()]
 
+    async def get_chats(self, limit: int) -> list[ChatSchema]:
+        result = await self.session.execute(select(ChatSchema).limit(limit=limit))
+        return [agent for agent in result.scalars().all()]
+
     #
     # def delete_chat(self, chat_id: int) -> None:
     #     db_chat = self._session.execute(

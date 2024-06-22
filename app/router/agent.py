@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends
 
 from app.model import AddKnowledges, AgentCreate, AgentOut
-from app.router.dependency import fastapi_users, get_current_user, get_db
+from app.router.dependency import get_current_user, get_db
 from app.storage.database import Database
 from app.storage.schema import AgentSchema, UserSchema
 

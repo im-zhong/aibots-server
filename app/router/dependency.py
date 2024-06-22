@@ -20,16 +20,18 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_user_db(session: AsyncSession = Depends(get_async_session)):
-    yield SQLAlchemyUserDatabase(session, UserSchema)
+async def get_db(session: AsyncSession = Depends(dependency=get_async_session)):
+    yield Database(session=session)
 
 
-async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
-    yield UserManager(user_db)
+async def get_user_db(session: AsyncSession = Depends(dependency=get_async_session)):
+    yield SQLAlchemyUserDatabase(session=session, user_table=UserSchema)
 
 
-async def get_db(session: AsyncSession = Depends(get_async_session)):
-    yield Database(session)
+async def get_user_manager(
+    user_db: SQLAlchemyUserDatabase = Depends(dependency=get_user_db),
+):
+    yield UserManager(user_db=user_db)
 
 
 fastapi_users = FastAPIUsers[UserSchema, UUID](
@@ -39,7 +41,9 @@ fastapi_users = FastAPIUsers[UserSchema, UUID](
 
 
 async def get_current_user(
-    user: UserSchema = Depends(fastapi_users.current_user(active=True, verified=True)),
+    user: UserSchema = Depends(
+        dependency=fastapi_users.current_user(active=True, verified=True)
+    ),
 ):
     yield user
 

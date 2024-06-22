@@ -9,11 +9,12 @@ from fastapi import APIRouter, Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import (
     AuthenticationBackend,
+    BearerTransport,
     CookieTransport,
     RedisStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users.authentication import BearerTransport
+
 from app.common import conf
 from app.model import UserUpdate
 from app.model.user import UserCreate, UserOut

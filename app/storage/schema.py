@@ -66,6 +66,7 @@ class ChatSchema(BaseSchema):
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id"))
+    # TODO: correct create_at to created_at
     create_at: Mapped[datetime] = mapped_column(default=datetime.now())
     is_deleted: Mapped[bool] = mapped_column(default=False)
 

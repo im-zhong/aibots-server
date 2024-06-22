@@ -10,7 +10,7 @@ from langchain.tools import BaseTool
 from app.aibot import AIBotFactory
 from app.aibot.agent import Agent
 from app.aibot.chatbot import ChatBot
-from app.model import ChatCreate, ChatMessage
+from app.model import ChatCreate, ChatMessage, ChatOut
 from app.router.dependency import (
     get_current_user,
     get_db,
@@ -57,6 +57,15 @@ async def create_tools_from_bot(bot: AgentSchema, db: Database) -> list[BaseTool
         retrieval_tool = RetrieverToolFactory(knowledge=knowledge).new()
         tools.append(retrieval_tool)
     return tools
+
+
+@chat.get(path="/api/chat/list")
+async def list_chats(
+    limit: int,
+    db: Database = Depends(get_db),
+    user: UserSchema = Depends(dependency=get_current_user),
+) -> list[ChatOut]:
+    return await db.get_chats(limit=limit)  # type: ignore
 
 
 # # https://github.com/fastapi-users/fastapi-users/issues/295
