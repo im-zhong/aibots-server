@@ -36,3 +36,9 @@ fastapi_users = FastAPIUsers[UserSchema, UUID](
     get_user_manager=get_user_manager,
     auth_backends=[auth_backend],
 )
+
+
+async def get_current_user(
+    user: UserSchema = Depends(fastapi_users.current_user(active=True, verified=True)),
+):
+    yield user

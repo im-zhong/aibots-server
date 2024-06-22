@@ -16,14 +16,14 @@ from app.common.conf import conf
 from app.model import AgentCreate, ChatCreate, KnowledgeCreate, KnowledgePointCreate
 
 from .schema import (
-    BaseSchema,
+    AgentKnowledgeSchema,
     AgentSchema,
+    BaseSchema,
     ChatSchema,
     KnowledgePointSchema,
     KnowledgeSchema,
     MessageSchema,
     UserSchema,
-    AgentKnowledgeSchema,
 )
 
 engine = create_async_engine(
@@ -56,6 +56,13 @@ class Database:
         # 所以要在一个单独的方法里面创建
         #
         self.session = session
+        # WTF!
+        # async with session.begin(): sqlalchemy.exc.InvalidRequestError: A transaction is already begun on this Session
+        # 不太清楚内部是怎么实现的 但是看起来他们公用了session 而且都启动了transaction 导致了这个问题
+        # 竟然是因为这里的问题
+        # 那这样的话 我们就不能通过database来创建用户了
+        # 其实也本来也不用，因为我们的用户是通过fastapiusers来创建的
+        # 不过这样就不太方便测试了 还好我再utils封装了一下 简直天才！
         self.user_db = SQLAlchemyUserDatabase(
             session=session,
             user_table=UserSchema,
@@ -124,9 +131,11 @@ class Database:
         # bot_dict["user_id"] = "f3e60362-40cc-463f-8f69-b0c8cd3a0b9d"
         # bot_dict.pop("knowledges")
         agent = AgentSchema(**agent_dict)
-        async with self.session.begin():
-            self.session.add(agent)
-            await self.session.commit()
+        # async with self.session.begin():
+        # 好像不需要写session.begin()就行了 毕竟fastapiusers也是这么写的
+        # 看来他好像是已经启动了一个transaction了 我们就不需要启动了
+        self.session.add(agent)
+        await self.session.commit()
         await self.session.refresh(agent)
         return agent
 
@@ -143,9 +152,9 @@ class Database:
         self, knowledge_create: KnowledgeCreate
     ) -> KnowledgeSchema:
         knowledge = KnowledgeSchema(**knowledge_create.model_dump())
-        async with self.session.begin():
-            self.session.add(knowledge)
-            await self.session.commit()
+        # async with self.session.begin():
+        self.session.add(knowledge)
+        await self.session.commit()
         await self.session.refresh(knowledge)
         return knowledge
 
@@ -162,9 +171,9 @@ class Database:
         self, knowledge_point_create: KnowledgePointCreate
     ) -> KnowledgePointSchema:
         knowledge_point = KnowledgePointSchema(**knowledge_point_create.model_dump())
-        async with self.session.begin():
-            self.session.add(knowledge_point)
-            await self.session.commit()
+        # async with self.session.begin():
+        self.session.add(knowledge_point)
+        await self.session.commit()
         await self.session.refresh(knowledge_point)
         return knowledge_point
 
@@ -172,32 +181,32 @@ class Database:
         self, agent_id: UUID, knowledge_ids: list[UUID]
     ) -> list[AgentKnowledgeSchema]:
         aks = []
-        async with self.session.begin():
-            for knowledge_id in knowledge_ids:
-                agent_knowledge = AgentKnowledgeSchema(
-                    agent_id=agent_id, knowledge_id=knowledge_id
-                )
-                aks.append(agent_knowledge)
-                self.session.add(agent_knowledge)
-            await self.session.commit()
+        # async with self.session.begin():
+        for knowledge_id in knowledge_ids:
+            agent_knowledge = AgentKnowledgeSchema(
+                agent_id=agent_id, knowledge_id=knowledge_id
+            )
+            aks.append(agent_knowledge)
+            self.session.add(agent_knowledge)
+        await self.session.commit()
         # refresh outside context manager
         for ak in aks:
             await self.session.refresh(ak)
         return aks
 
     async def get_knowledges_of_agent(self, agent_id: UUID) -> list[KnowledgeSchema]:
-        async with self.session.begin():
-            # 难道是这样写不行吗
-            # 还是只能自己写一个join？
-            # 还真是，只能自己写join
-            # agent = await self.get_agent_else_throw(agent_id=agent_id)
-            # return [ak.associated_knowledge for ak in agent.agent_knowledges]
-            result = await self.session.execute(
-                statement=select(KnowledgeSchema)
-                .join(AgentKnowledgeSchema)
-                .filter(AgentKnowledgeSchema.agent_id == agent_id)
-            )
-            return [knowledge for knowledge in result.scalars().all()]
+        # async with self.session.begin():
+        # 难道是这样写不行吗
+        # 还是只能自己写一个join？
+        # 还真是，只能自己写join
+        # agent = await self.get_agent_else_throw(agent_id=agent_id)
+        # return [ak.associated_knowledge for ak in agent.agent_knowledges]
+        result = await self.session.execute(
+            statement=select(KnowledgeSchema)
+            .join(AgentKnowledgeSchema)
+            .filter(AgentKnowledgeSchema.agent_id == agent_id)
+        )
+        return [knowledge for knowledge in result.scalars().all()]
 
     #
     # # TODO:
@@ -232,9 +241,9 @@ class Database:
     # # chats
     async def create_chat(self, chat_create: ChatCreate) -> ChatSchema:
         chat = ChatSchema(**chat_create.model_dump())
-        async with self.session.begin():
-            self.session.add(chat)
-            await self.session.commit()
+        # async with self.session.begin():
+        self.session.add(chat)
+        await self.session.commit()
         await self.session.refresh(chat)
         return chat
 

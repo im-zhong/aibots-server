@@ -26,9 +26,9 @@ from app.common.conf import conf
 # TODO: 其实category不是必须的，因为path还是url可以通过 local:// 和 http:// 来区分
 # 而文件的种类可以通过后缀来区分 所以实际上不需要category
 from app.model import KnowledgeCreate, KnowledgePointCategory, KnowledgePointCreate
-from app.router.dependency import AsyncSession, get_db
+from app.router.dependency import AsyncSession, get_current_user, get_db
 from app.storage.database import Database, async_session_maker
-from app.storage.schema import KnowledgePointSchema
+from app.storage.schema import KnowledgePointSchema, UserSchema
 from app.storage.vector_store import vector_store
 
 # from app.storage.vector_store import KnowledgeBase
@@ -82,7 +82,9 @@ async def create_knowledge_indexing(knowledge_point: KnowledgePointSchema):
 
 @knowledge.post(path="/create")
 async def create_knowledge(
-    knowledge_create: KnowledgeCreate, db: Database = Depends(get_db)
+    knowledge_create: KnowledgeCreate,
+    db: Database = Depends(get_db),
+    user: UserSchema = Depends(dependency=get_current_user),
 ) -> str:
     knowledge = await db.create_knowledge(knowledge_create=knowledge_create)
     return str(knowledge.id)
@@ -105,6 +107,7 @@ async def knowledge_upload(
     file: Annotated[UploadFile, File(description="knowledge file")],
     db: Annotated[Database, Depends(get_db)],
     background_tasks: BackgroundTasks,
+    user: UserSchema = Depends(dependency=get_current_user),
 ):
     # knowledge_id = str(uuid.uuid4())
     filename = f"{knowledge_id}-{file.filename}"
@@ -168,6 +171,7 @@ async def knowledge_upload_webpage(
     # knowledge_point_create: KnowledgePointCreate,
     background_tasks: BackgroundTasks,
     db: Annotated[Database, Depends(get_db)],
+    user: UserSchema = Depends(dependency=get_current_user),
 ) -> str:
     # knowledge_id = str(uuid.uuid4())
 
