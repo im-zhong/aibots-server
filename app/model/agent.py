@@ -4,6 +4,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -69,16 +70,22 @@ class AgentCreate(BaseModel):
 #
 class AgentOut(BaseModel):
     id: uuid.UUID = Field(description="机器人id")
+    user_id: uuid.UUID = Field(description="用户id")
     name: str = Field(description="机器人名称")
+    avatar: str = Field(default="", description="头像")
     description: str = Field(description="机器人信息")
-    category: BotCategory = Field(description="机器人类型")
+    # category: BotCategory = Field(description="机器人类型")
     # avatar_description: str | None = Field(description="头像描述")
     # avatar_url: str = Field(description="头像url")
     created_at: datetime = Field(description="创建时间")
     # updated_at: datetime | None = Field(description="更新时间")
     # is_deleted: bool = Field(description="是否删除")
     is_shared: bool = Field(description="是否共享")
-    user_id: uuid.UUID = Field(description="用户id")
 
     class Config:
         from_attributes = True
+
+
+class AddKnowledges(BaseModel):
+    agent_id: UUID
+    knowledge_ids: list[UUID]

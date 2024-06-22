@@ -168,17 +168,22 @@ class Database:
         await self.session.refresh(knowledge_point)
         return knowledge_point
 
-    async def add_knowledge_to_agent(
-        self, agent_id: UUID, knowledge_id: UUID
-    ) -> AgentKnowledgeSchema:
+    async def add_knowledges_to_agent(
+        self, agent_id: UUID, knowledge_ids: list[UUID]
+    ) -> list[AgentKnowledgeSchema]:
+        aks = []
         async with self.session.begin():
-            agent_knowledge = AgentKnowledgeSchema(
-                agent_id=agent_id, knowledge_id=knowledge_id
-            )
-            self.session.add(agent_knowledge)
+            for knowledge_id in knowledge_ids:
+                agent_knowledge = AgentKnowledgeSchema(
+                    agent_id=agent_id, knowledge_id=knowledge_id
+                )
+                aks.append(agent_knowledge)
+                self.session.add(agent_knowledge)
             await self.session.commit()
-        await self.session.refresh(agent_knowledge)
-        return agent_knowledge
+        # refresh outside context manager
+        for ak in aks:
+            await self.session.refresh(ak)
+        return aks
 
     async def get_knowledges_of_agent(self, agent_id: UUID) -> list[KnowledgeSchema]:
         async with self.session.begin():

@@ -134,10 +134,12 @@ class DBUtil:
         if knowledge is None:
             knowledge = await DBUtil.create_temp_knowledge()
         async with async_session_maker() as session:
-            return await Database(session=session).add_knowledge_to_agent(
-                agent_id=agent.id,
-                knowledge_id=knowledge.id,
-            )
+            return (
+                await Database(session=session).add_knowledges_to_agent(
+                    agent_id=agent.id,
+                    knowledge_ids=[knowledge.id],
+                )
+            )[0]
 
     @staticmethod
     async def get_knowledges_of_agent(agent: AgentSchema) -> list[KnowledgeSchema]:

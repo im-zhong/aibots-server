@@ -35,9 +35,9 @@ class AgentSchema(BaseSchema):
     __tablename__ = "agents"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
-    avatar: Mapped[str] = mapped_column(default="")
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(index=True)
+    avatar: Mapped[str] = mapped_column(default="")
     description: Mapped[str] = mapped_column()
     # category: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
