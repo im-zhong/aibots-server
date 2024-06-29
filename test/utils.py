@@ -2,11 +2,15 @@
 # zhangzhong
 
 
+import base64
 import random
 import uuid
+from datetime import datetime
+from io import BytesIO
 
 import redis.asyncio
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.common.conf import conf
 from app.main import app
@@ -26,6 +30,7 @@ from app.storage.schema import (
     MessageSchema,
     UserSchema,
 )
+from app.tool.painting import dalle
 
 myredis = redis.asyncio.from_url(url=conf.redis_url, decode_responses=True)
 
@@ -279,3 +284,49 @@ class MyTestClient:
 
 
 my_client = MyTestClient()
+
+
+class PaintingTool:
+    def __init__(self) -> None:
+        pass
+
+    def draw(self, prompt: str):
+        # class ImagesResponse(BaseModel):
+        # created: int
+        # data: List[Image]
+
+        # class Image(BaseModel):
+        # b64_json: Optional[str] = None
+        # """
+        # The base64-encoded JSON of the generated image, if `response_format` is
+        # `b64_json`.
+        # """
+        # revised_prompt: Optional[str] = None
+        # """
+        # The prompt that was used to generate the image, if there was any revision to the
+        # prompt.
+        # """
+        # url: Optional[str] = None
+        # """The URL of the generated image, if `response_format` is `url` (default)."""
+        response = dalle(prompt=prompt)
+        for image in response.data:
+            #  print(image.b64_json)
+            print(image.revised_prompt)
+            if image.url:
+                print(image.url)
+            if image.b64_json:
+                # Step 1: Decode the base64 string
+                image_bytes = base64.b64decode(image.b64_json)
+
+                # Step 2: Create an image from the decoded bytes
+                image_data = BytesIO(image_bytes)
+                image = Image.open(image_data)
+
+                # Step 3: Save the image to a file
+                # 咱们自动生成一些id吧，或者说可以用created这个充当id
+                image.save(
+                    fp=f"assets/images/{datetime.now().strftime(format="%d-%m-%Y-%H-%M-%S")}-{response.created}.png"
+                )  # Specify your desired output image file name and format
+
+
+painting_tool = PaintingTool()
